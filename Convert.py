@@ -1,4 +1,4 @@
-#A program to take in the JMP output and transform it into an input for Epimotion machine
+#A program to take in the JMP output and convert it into an input for Epmotion machine
 
 #!/usr/bin/python
 import xlrd
@@ -14,6 +14,7 @@ Rack_Layout = ["A1","A2","A3","A4","A5","A6","B1","B2","B3","B4","B5","B6","C1",
 Volume = "10"
 Tool = "TS_50"
 Source = []
+Dilutions = []
 
 #Opens the Workbook and first sheet using the xlrd
 def JMP_Input(Input_File):
@@ -23,7 +24,11 @@ def JMP_Input(Input_File):
 
     return Input_Sheet
 
-#Takes the information from the JMP file and places everything into a format readable by Epimotion
+#Create a CSV that dilutes the stock concentrations as per the user input
+def Dilution():
+    Factor_Conc = []
+
+#Takes the information from the JMP file and places everything into a format readable by Epmotion
 def Rearrangment(JMP_Sheet, Layout):
 
     Plate_wells = 60
@@ -36,13 +41,6 @@ def Rearrangment(JMP_Sheet, Layout):
         if (i == 0):
             Source.append(["Edge Liquid",Layout[i]])
             Source.append([JMP_Sheet.cell_value(0,i+1),Layout[i+1]])
-            j = i + 1
-        else:
-            Source.append([JMP_Sheet.cell_value(0,i+1),Layout[j]])
-        for k in range(num_Levels):
-            j = j + 1
-            Source.append([JMP_Sheet.cell_value(0,i+1) + "_" + str(Levels[k]),Layout[j]])
-        j = j + 1
 
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
 
@@ -61,22 +59,31 @@ def Rearrangment(JMP_Sheet, Layout):
 
     return Plates
 
-#Outputs a CSV that is usable by Epimotion
-def Epimotion_Output(Plates_Info):
+#Outputs a CSV that is usable by Epmotion
+def Epmotion_Output(Plates_Info):
 
     #Header
     Header_Data = [["Rack","Source","Rack","Destination","Volume","Tool"]]
 
-    #Creates a CSV file and feeds in the new data for Epimotion
-    name = "Epimotion_" + str(datetime.now())+"_SR.csv"
-    with open(name, "w") as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerows(Header_Data)
-
-        for i in range(len(Plates_Info)):
+    for i in range(len(Plates_Info)):
+        #Creates a CSV file and feeds in the new data for Epmotion
+        name = "Epmotion_Plates_"+ str(i+1)  + "_" + str(datetime.now())+"_SR.csv"
+        with open(name, "w") as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerows(Header_Data)
             writer.writerows(Plates_Info[i].EdgeData)
             writer.writerows(Plates_Info[i].Commands)
-    csvFile.close()
+        csvFile.close()
+
+#Outputs a written protocol for original rack placement
+def Protcol_Output():
+    name = "Protocol" +  str(datetime.now())+"_SR.txt"
+    File =  open(name,"w")
+
+    File.write("Epmotion Protocol\n")
+    File.write("Please place Edge Liquid into Rack 1: Well A1")
+
+    File.close()
 
 class Plate:
 
@@ -110,8 +117,7 @@ class Plate:
       self.Commands = []
 
 if __name__ == '__main__':
-
     JMP_Sheet = JMP_Input(sys.argv[1])
     Output_Plates = Rearrangment(JMP_Sheet, Rack_Layout)
-    Epimotion_Output(Output_Plates)
-    #Protcol_Output(OutputInfo)
+    Epmotion_Output(Output_Plates)
+    Protcol_Output()
