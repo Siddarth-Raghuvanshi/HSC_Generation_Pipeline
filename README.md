@@ -3,7 +3,7 @@
 The purpose of this program is to take a Excel output from JMP and convert it into a format readable by the Epmotion. The program generates a protocol instructing the user to take the relevant steps needed to start the machine. The program uses a GUI input created with tkinter and has a clickable file for Mac and Windows Users.
 
 
-# Usage
+# Setup
 
 ### For Mac users:
 
@@ -23,4 +23,4 @@ There are a few assumptions that the program makes that might be an issue for fu
 * A 24 well rack will be used as a source
 * A 6 well plate will not have edge effects added
 * Only 96 well plates as outputs are currently supported
-* Assumes that each factor uses all of the levels (i.e. fractional factorials are currently not supported)
+* Assumes that each factor uses all of the levels (i.e. Is not optimised for fractional factorials)

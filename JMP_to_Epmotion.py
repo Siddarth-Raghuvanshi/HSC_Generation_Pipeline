@@ -1,4 +1,7 @@
 from Epmotion_GUI import Get_Files
+from Convert import Run
+import xlrd
+
 
 #Opens the Workbook and first sheet using the xlrd
 def JMP_Input(Input_File):
@@ -8,13 +11,7 @@ def JMP_Input(Input_File):
 
     return Input_Sheet
 
-#Create a CSV that dilutes the stock concentrations as per the user input
-def Dilution():
-    Factor_Conc = []
-
 if __name__ == '__main__':
     Input, Plate = Get_Files()
     JMP_Sheet = JMP_Input(Input)
-    Output_Plates = Rearrangment(JMP_Sheet, Rack_Layout)
-    Epmotion_Output(Output_Plates)
-    Protcol_Output()
+    Run(JMP_Sheet)
