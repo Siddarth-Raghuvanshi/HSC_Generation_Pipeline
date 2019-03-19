@@ -12,6 +12,9 @@ def JMP_Input(Input_File):
     return Input_Sheet
 
 if __name__ == '__main__':
-    Input, Plate = Get_Files()
+    Input, Plate,Volume = Get_Files()
+    print("This is Volume:")
+    print(Volume)
+    print(type(Volume))
     JMP_Sheet = JMP_Input(Input)
     Run(JMP_Sheet)

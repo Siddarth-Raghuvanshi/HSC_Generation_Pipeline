@@ -13,6 +13,7 @@ class GUI(object):
         self.Files.append([])
         self.num_of_Additional = 0
         self.PlateType = []
+        self.Volume = 0
         self.Win = Master
 
     #Button Functions
@@ -48,27 +49,37 @@ class GUI(object):
             FileName = Button(F,text = "File Name", command = lambda: self.File(FileName,Type, Count))
             FileName.grid(row = 0, column = 2)
 
-        #IF this isn't an FILE button, run this code to display the buttons
-        else:
+        #IF this is a plate, run this code to display the menu
+        elif (Type == "PLATE"):
             Formats = [ "96 Well", "24 Well", "6 Well"]
             Format_Var = StringVar(self.Win)
             Format_Var.set("96 Well") # default value
             self.PlateType.append(Format_Var)
-            FileName = OptionMenu(F, Format_Var, *Formats)
-            FileName.grid(row = 0, column = 2)
+            Plate_Type = OptionMenu(F, Format_Var, *Formats)
+            Plate_Type.grid(row = 0, column = 2)
+
+        else:
+            Volume_Var = Entry(F)
+            Volume_Var.grid(row = 0, column = 2)
+            self.Volume = Volume_Var
+
 
         return F
 
     def run(self):
 
-        self.Win.title("RNA Velocity ")
+        self.Win.title("JMP to Epmotion")
 
-        self.T_Seq = self.Organizer("Please select the JMP Excel Output", "FILE")
-        self.T_Seq.grid(row = self.row, column = 0)
+        self.Input = self.Organizer("Please select the JMP Excel Output", "FILE")
+        self.Input.grid(row = self.row, column = 0)
         self.row += 1
 
-        self.G_Seq = self.Organizer("Please select the type of Plate", "PLATE")
-        self.G_Seq.grid(row = self.row, column = 0)
+        self.Plate = self.Organizer("Please select the type of Plate", "PLATE")
+        self.Plate.grid(row = self.row, column = 0)
+        self.row += 1
+
+        self.Vol = self.Organizer("What is the Volume of Diluted Factor Needed ?", "VOL")
+        self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
         #Done Button
@@ -86,9 +97,10 @@ def Get_Files():
 
     JMP_Excel = Program.Files[0][0]
     Plate_Format = Program.PlateType[0].get()
+    Volume = Program.Volume.get()
 
     #Add code submiting for additional commands
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format)
+    return( JMP_Excel, Plate_Format, Volume)

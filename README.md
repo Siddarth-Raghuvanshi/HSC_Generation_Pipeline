@@ -21,6 +21,5 @@ Where ``` /path ``` is the current directory of the HSC_Generation_Pipeline fold
 There are a few assumptions that the program makes that might be an issue for future experimentation
 
 * A 24 well rack will be used as a source
-* A 6 well plate will not have edge effects added
 * Only 96 well plates as outputs are currently supported
-* Assumes that each factor uses all of the levels (i.e. Is not optimised for fractional factorials)
+* Assumes that each factor needs the same volume (i.e. Is not optimised for fractional factorials)

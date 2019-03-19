@@ -24,7 +24,7 @@ def JMP_Input(Input_File):
     return Input_Sheet
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
-def Rearrangment(JMP_Sheet, Layout):
+def Rearrangment(JMP_Sheet, Layout, Volume):
 
     Plate_wells = 60
     num_Factors = JMP_Sheet.row_len(0) - 2
@@ -43,7 +43,7 @@ def Rearrangment(JMP_Sheet, Layout):
         Source.append([JMP_Sheet.cell_value(0,i+1),Layout[i+1]])
         Factors.append(JMP_Sheet.cell_value(0,i+1))
 
-    Dilution_Locations = Dilute(Levels, Factors)
+    Dilution_Locations = Dilute(Levels, Factors, Volume)
 
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
     Plates = []
@@ -61,9 +61,9 @@ def Rearrangment(JMP_Sheet, Layout):
     return Plates
 
 #Create a CSV that dilutes the stock concentrations as per the user input.
-def Dilute(Levels, Factors):
+def Dilute(Levels, Factors, User_Vol):
 
-    Total_Volume = 1000
+    Total_Volume = User_Vol
 
     Header = [["Factors", "Source"] + Levels]
     name = "Dilution_Concentrations_" + str(datetime.now())+"_SR.csv"
@@ -182,7 +182,7 @@ class Plate:
       self.Commands = []
 
 def Run(Input):
-    Output_Plates = Rearrangment(Input, Rack_Layout)
+    Output_Plates = Rearrangment(Input, Rack_Layout, Dilution_Vol)
     Epmotion_Output(Output_Plates,"PLATE")
     Protcol_Output()
 
