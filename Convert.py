@@ -63,7 +63,7 @@ def Rearrangment(JMP_Sheet, Layout, Volume):
 #Create a CSV that dilutes the stock concentrations as per the user input.
 def Dilute(Levels, Factors, User_Vol):
 
-    Total_Volume = User_Vol
+    Total_Volume = float(User_Vol)
 
     Header = [["Factors", "Source"] + Levels]
     name = "Dilution_Concentrations_" + str(datetime.now())+"_SR.csv"

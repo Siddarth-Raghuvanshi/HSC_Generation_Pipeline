@@ -78,7 +78,7 @@ class GUI(object):
         self.Plate.grid(row = self.row, column = 0)
         self.row += 1
 
-        self.Vol = self.Organizer("What is the Volume of Diluted Factor Needed ?", "VOL")
+        self.Vol = self.Organizer("What is the Volume of Diluted Factor Needed (uL) ?", "VOL")
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
