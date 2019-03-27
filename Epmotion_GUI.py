@@ -13,7 +13,7 @@ class GUI(object):
         self.Files.append([])
         self.num_of_Additional = 0
         self.PlateType = []
-        self.Volume = 0
+        self.Volume = []
         self.Win = Master
 
     #Button Functions
@@ -51,7 +51,7 @@ class GUI(object):
 
         #IF this is a plate, run this code to display the menu
         elif (Type == "PLATE"):
-            Formats = [ "96 Well", "24 Well", "6 Well"]
+            Formats = [ "96 Well", "384 Well", "24 Well"]
             Format_Var = StringVar(self.Win)
             Format_Var.set("96 Well") # default value
             self.PlateType.append(Format_Var)
@@ -61,7 +61,7 @@ class GUI(object):
         else:
             Volume_Var = Entry(F)
             Volume_Var.grid(row = 0, column = 2)
-            self.Volume = Volume_Var
+            self.Volume.append(Volume_Var)
 
 
         return F
@@ -82,6 +82,10 @@ class GUI(object):
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
+        self.Vol = self.Organizer("What is the Volume of each Factor added to the plate (uL) ?", "VOL")
+        self.Vol.grid(row = self.row, column = 0)
+        self.row += 1
+
         #Done Button
         self.Done = Button(self.Win, text = "Done", command = self.End)
         self.Done.grid(row = self.row, column = 0, pady = 50)
@@ -97,10 +101,11 @@ def Get_Files():
 
     JMP_Excel = Program.Files[0][0]
     Plate_Format = Program.PlateType[0].get()
-    Volume = Program.Volume.get()
+    Dil_Volume = Program.Volume[0].get()
+    Add_Volume = Program.Volume[1].get()
 
     #Add code submiting for additional commands
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format, Volume)
+    return( JMP_Excel, Plate_Format, Dil_Volume, Add_Volume)
