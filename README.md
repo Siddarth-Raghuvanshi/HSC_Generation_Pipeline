@@ -27,13 +27,13 @@ Make sure that the following libraries are installed:
 
 This can be easily achieved by installing Anaconda (Python 3) on to the computer.
 
-#Usage
+# Usage
 
-### For Mac and Linux Users
+### For Mac and Linux Users:
 
 Click the ```JMP to EpMotion.command``` file.
 
-### For Windows Users
+### For Windows Users:
 
 Click the ```JMP to EpMotion.bat``` file.
 
@@ -44,7 +44,7 @@ Click the ```JMP to EpMotion.bat``` file.
 2. Select the type of plate you will be using
 3. Add the volume of each level you would need.
   1. A good rule of hand is to use ten percent extra (i.e. 110% of the required volume to be added)
-4. Add the volume you would like to be added to each plate. 
+4. Add the volume you would like to be added to each plate.
 
 
 
