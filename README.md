@@ -1,6 +1,6 @@
 # HSC Generation Pipeline
 
-The purpose of this program is to take a Excel output from JMP and convert it into a format readable by the Epmotion. The program generates a protocol instructing the user to take the relevant steps needed to start the machine. The program uses a GUI input created with tkinter and has a clickable file for Mac and Windows Users.
+The purpose of this program is to take a Excel output from JMP and convert it into a format readable by the EpMotion. The program generates a protocol instructing the user to take the relevant steps needed to start the machine. The program uses a GUI input created with tkinter and has a clickable file for Mac and Windows Users.
 
 
 # Setup
@@ -21,5 +21,5 @@ Where ``` /path ``` is the current directory of the HSC_Generation_Pipeline fold
 There are a few assumptions that the program makes that might be an issue for future experimentation
 
 * A 24 well rack will be used as a source
-* Only 96 well plates as outputs are currently supported
+* Only 96 and 384 well plates as outputs are currently supported
 * Assumes that each factor needs the same volume (i.e. Is not optimised for fractional factorials)

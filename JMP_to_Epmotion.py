@@ -1,5 +1,5 @@
 from Epmotion_GUI import Get_Files
-from Convert import Run
+from Convert import *
 import xlrd
 
 
@@ -11,7 +11,13 @@ def JMP_Input(Input_File):
 
     return Input_Sheet
 
+def Run(Input, Dilution_Vol):
+
+    Output_Plates = Rearrangment(Input, Rack_Layout, Dilution_Vol)
+    Epmotion_Output(Output_Plates,"PLATE")
+    Protcol_Output()
+
 if __name__ == '__main__':
     Input, Plate,Volume = Get_Files()
     JMP_Sheet = JMP_Input(Input)
-    Run(JMP_Sheet)
+    Run(JMP_Sheet, Plate, Volume)

@@ -8,6 +8,7 @@ import numpy as np
 import string
 from math import ceil
 from datetime import datetime
+from tkinter import messagebox
 
 #Global Variables
 Rack_Layout = ["A1","A2","A3","A4","A5","A6","B1","B2","B3","B4","B5","B6","C1","C2","C3","C4","C5","C6","D1","D2","D3","D4","D5","D6"]
@@ -45,6 +46,11 @@ def Rearrangment(JMP_Sheet, Layout, Volume):
 
     Dilution_Locations = Dilute(Levels, Factors, Volume)
 
+    if !Dilution_Locations:
+        while !(Dilution_Locations):
+            messagebox.showerror("Error", "A factor source value is lower than the level dilution value. Please fill it again")
+            Dilution_Locations = Dilute(Levels, Factors, Volume,True)
+
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
     Plates = []
     for i in range(num_plates):
@@ -61,20 +67,21 @@ def Rearrangment(JMP_Sheet, Layout, Volume):
     return Plates
 
 #Create a CSV that dilutes the stock concentrations as per the user input.
-def Dilute(Levels, Factors, User_Vol):
+def Dilute(Levels, Factors, User_Vol,Screwup = False):
 
-    Total_Volume = float(User_Vol)
+    if !(Screwup):
+        Total_Volume = float(User_Vol)
 
-    Header = [["Factors", "Source"] + Levels]
-    name = "Dilution_Concentrations_" + str(datetime.now())+"_SR.csv"
-    with open(name, "w") as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerows(Header)
-        for i in range(len(Factors)):
-            writer.writerow([Factors[i]])
-    csvFile.close()
+        Header = [["Factors", "Source"] + Levels]
+        name = "Dilution_Concentrations_" + str(datetime.now())+"_SR.csv"
+        with open(name, "w") as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerows(Header)
+            for i in range(len(Factors)):
+                writer.writerow([Factors[i]])
+        csvFile.close()
 
-    print("\n\n\nA CSV for Dilutions has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
+    messagebox.showinfo("Dilutions", "A CSV for Dilutions has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
     input("\nPress Enter to continue once completed...")
 
     Max_Dilution_Factor = 1/1000 # Max Dilution before it resorts to cereal dilutions
@@ -90,6 +97,8 @@ def Dilute(Levels, Factors, User_Vol):
                 line_count += 1
             else:
                 for i in range(len(Levels)):
+                    if row[1] < row[i+2]:
+                        return False;
                     Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i]
                     Volume_to_add = float(row[i+2])/float(row[1])*Total_Volume
                     Top_up_Volume = Total_Volume - Volume_to_add #How much liquid needs to be added to top up to the correct concentration
@@ -150,41 +159,42 @@ def Protcol_Output():
 
     File.close()
 
-class Plate:
+class Plate(Plate_Type):
+    if(Plate_Type = 96):
+        num_Edgewells = 1
+        Rows = 8
+        Cols = 12
+    elif(Plate_Type = 384):
+        num_Edgewells = 2
+        Rows = 16
+        Cols = 24
 
     #Adds Liquid to account for Edge Effects
     EdgeData = []
-    num_Edgewells = 36
-    for i in range(num_Edgewells):
-        if (i<12) or (i>24):
-            Letter = "A"
-            if (i>24):
-                Letter = "H"
-            Value = Letter+str(i%12+1)
-            EdgeData.append(["1","A1","1",Value,Volume,Tool])
-        elif (i<18):
-            Value = list(string.ascii_uppercase)[i%6+1]+"1"
-            EdgeData.append(["1","A1","1",Value,Volume,Tool])
+    for i in range(Rows):
+        if(i > num_Edgewells):
+            for j in range(Cols):
+                Value = list(string.ascii_uppercase)[i]+str(j)
+                EdgeData.append(["1","A1","1",Value,Volume,Tool])
+        elif(((Row - 1 - i) < num_Edgewells)):
+            for j in range(Cols):
+                Value = list(string.ascii_uppercase)[i]+str(j)
+                EdgeData.append(["1","A1","1",Value,Volume,Tool])
         else:
-            Value = list(string.ascii_uppercase)[i%6+1]+"12"
-            EdgeData.append(["1","A1","1",Value,Volume,Tool])
-
+            for j in range(num_Edgewells)
+                Value = list(string.ascii_uppercase)[i]+str(j+1)
+                EdgeData.append(["1","A1","1",Value,Volume,Tool])
+                Value = list(string.ascii_uppercase)[i]+str(Cols-j)
+                EdgeData.append(["1","A1","1",Value,Volume,Tool])
     #Creates values for useable wells
     Wells = []
-    num_Cols = 11
-    num_rows = 6
-    for i in range(num_Cols):
-        for j in range(num_rows):
-            Well_Value = list(string.ascii_uppercase)[j%6+1]+str(((i+2)%12))
+    for i in range(Cols - (num_Edgewells * 2)):
+        for j in range(Rows - (num_Edgewells * 2)):
+            Well_Value = list(string.ascii_uppercase)[j]+str(i)
             Wells.append(Well_Value)
 
     def __init__(self):
       self.Commands = []
-
-def Run(Input):
-    Output_Plates = Rearrangment(Input, Rack_Layout, Dilution_Vol)
-    Epmotion_Output(Output_Plates,"PLATE")
-    Protcol_Output()
 
 if __name__ == '__main__':
     JMP_Sheet = JMP_Input(sys.argv[1])
