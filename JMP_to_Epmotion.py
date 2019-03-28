@@ -15,9 +15,9 @@ def JMP_Input(Input_File):
 
 def Run(Input, Plate, Dilution_Vol, Factor_Vol):
 
-    Output_Plates = Rearrangment(Input, Rack_Layout, Dilution_Vol,Plate, Factor_Vol)
+    Output_Plates, Conditions = Rearrangment(Input, Rack_Layout, Dilution_Vol,Plate, Factor_Vol)
     Epmotion_Output(Output_Plates,"PLATE")
-    Protcol_Output()
+    Protcol_Output(Conditions)
 
 if __name__ == '__main__':
 

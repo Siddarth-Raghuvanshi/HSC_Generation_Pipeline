@@ -9,26 +9,21 @@ import string
 from math import ceil
 from datetime import datetime
 from tkinter import messagebox
+import os
 
 #Global Variables
 Rack_Layout = ["A1","A2","A3","A4","A5","A6","B1","B2","B3","B4","B5","B6","C1","C2","C3","C4","C5","C6","D1","D2","D3","D4","D5","D6"]
 Tool = "TS_50"
 Source = []
-
-#Opens the Workbook and first sheet using the xlrd
-def JMP_Input(Input_File):
-
-    Input_workbook = xlrd.open_workbook(Input_File)
-    Input_Sheet = Input_workbook.sheet_by_index(0)
-
-    return Input_Sheet
+Folder_Name = os.getcwd()+"/Experiment_Files_" + str(datetime.now()) + "_SR"
+os.mkdir(Folder_Name)
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
 def Rearrangment(JMP_Sheet, Layout, Dil_Volume, PlateType, Level_Vol):
 
-    Plate_wells = 60
     num_Factors = JMP_Sheet.row_len(0) - 2
     Levels = set()
+    num_Runs = JMP_Sheet.nrows - 1
     #Used to take into account fractional factorial, i.e. uses all of the levels created by all the factors
     for i in range(num_Factors):
         Levels_for_Factor = set(JMP_Sheet.col_values(i+1,1))
@@ -36,6 +31,7 @@ def Rearrangment(JMP_Sheet, Layout, Dil_Volume, PlateType, Level_Vol):
     Levels = list(Levels)
     num_Levels = len(Levels)
     Factors = []
+    Total_Tests = num_Levels * num_Factors
 
     for i in range(num_Factors):
         Source.append([JMP_Sheet.cell_value(0,i+1),Layout[i]])
@@ -47,28 +43,36 @@ def Rearrangment(JMP_Sheet, Layout, Dil_Volume, PlateType, Level_Vol):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
             Dilution_Locations = Dilute(Levels, Factors, Dil_Volume,True,name)
 
+    Plate_wells = len(Plate(PlateType).Wells)
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
     Plates = []
+    Trials = 1
     for i in range(num_plates):
         Plates.append(Plate(PlateType))
-        Run = 1
         for j in range(Plate_wells):
-            Row = JMP_Sheet.row_values(Run+j)
+            if(Trials+j > num_Runs):
+                break
+            Row = JMP_Sheet.row_values(Trials+j)
             for k in range (1,len(Row)-1):
                 Feed_Location =  Dilution_Locations[num_Levels*(k-1)+Levels.index(Row[k])] # a bit much should simplfy.
                 Well_Location = Plates[i].Wells[j]
                 Plates[i].Commands.append([3,Feed_Location,2,Well_Location,Level_Vol, Tool])
-        Run = Run + j
+        Trials += j
 
-    return Plates
+    os.rename("Dilution_Concentrations_SR.csv", Folder_Name+"/Dilution_Concentrations_SR.csv")
+
+    return Plates,Total_Tests
 
 #Create a CSV that dilutes the stock concentrations as per the user input.
 def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
 
+    Total_Volume = float(User_Vol)
+    print(Total_Volume)
+
     if not Screwup:
-        Total_Volume = float(User_Vol)
+
         Header = [["Factors", "Source"] + Levels]
-        name = "Dilution_Concentrations_" + str(datetime.now())+"_SR.csv"
+        name = "Dilution_Concentrations_SR.csv"
         with open(name, "w") as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(Header)
@@ -83,7 +87,7 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
     Dilutions = []
     Commands = []
 
-    with open(name) as Dilution_Concentrations:
+    with open("/Users/siddarthraghuvanshi/Documents/Code/HSC_Generation_Pipeline/test_concentrations.csv") as Dilution_Concentrations:
         # I know I should use Pandas, but I'm on a time crunch and I don't want to learn it right now *Future programmers should add it for additional functionaity if they choose*
         csv_reader = csv.reader(Dilution_Concentrations, delimiter=',')
         line_count = 0
@@ -96,25 +100,29 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
                         return (False,name)
                     Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i]
                     Volume_to_add = float(row[i+2])/float(row[1])*Total_Volume
+                    print("Volume_to_add")
+                    print(Volume_to_add)
                     Top_up_Volume = Total_Volume - Volume_to_add #How much liquid needs to be added to top up to the correct concentration
-                    if (Volume_to_add%10 > 1):
-                        Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%10, "TS_10"])
-                        Volume_to_add =  Volume_to_add - Volume_to_add%10
-                    if (Top_up_Volume%10 > 1):
-                        Commands.append([2,1,1,Well_Location,Top_up_Volume%10, "TS_10"])
-                        Top_up_Volume = Top_up_Volume - Top_up_Volume%10
+                    print("Top_up_Volume")
+                    print(Top_up_Volume)
                     if (Volume_to_add%50 > 1):
                         Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%50, "TS_50"])
                         Volume_to_add =  Volume_to_add - Volume_to_add%50
                     if (Top_up_Volume%50 > 1):
                         Commands.append([2,1,1,Well_Location,Top_up_Volume%50, "TS_50"])
                         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-                    while (Volume_to_add >= 50):
-                        Commands.append([1,Source[line_count-1][1],1,Well_Location,50, "TS_50"])
-                        Volume_to_add =  Volume_to_add - 50
-                    while(Top_up_Volume >= 50):
-                        Commands.append([2,1,1,Well_Location,50, "TS_50"])
-                        Top_up_Volume = Top_up_Volume - 50
+                    if (Volume_to_add%300 > 1):
+                        Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%300, "TS_300"])
+                        Volume_to_add =  Volume_to_add - Volume_to_add%300
+                    if (Top_up_Volume%300 > 1):
+                        Commands.append([2,1,1,Well_Location,Top_up_Volume%300, "TS_300"])
+                        Top_up_Volume = Top_up_Volume - Top_up_Volume%300
+                    while (Volume_to_add >= 300):
+                        Commands.append([1,Source[line_count-1][1],1,Well_Location,300, "TS_300"])
+                        Volume_to_add =  Volume_to_add - 300
+                    while(Top_up_Volume >= 300):
+                        Commands.append([2,1,1,Well_Location,300, "TS_300"])
+                        Top_up_Volume = Top_up_Volume - 300
                     Dilutions.append(Well_Location)
                 line_count += 1
 
@@ -130,7 +138,7 @@ def Epmotion_Output(Info,Purpose):
     if (Purpose == "PLATE"):
         for i in range(len(Info)):
             #Creates a CSV file and feeds in the new data for Epmotion
-            name = "Epmotion_Plates_"+ str(i+1)  + "_" + str(datetime.now())+"_SR.csv"
+            name = Folder_Name + "/Epmotion_Plate_"+ str(i+1) + "_SR.csv"
             with open(name, "w") as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerows(Header_Data)
@@ -138,7 +146,7 @@ def Epmotion_Output(Info,Purpose):
                 writer.writerows(Info[i].Commands)
             csvFile.close()
     else:
-        name = "Dilution_Commands_"+ str(datetime.now())+"_SR.csv"
+        name = Folder_Name + "/Dilution_Commands_SR.csv"
         with open(name, "w") as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(Header_Data)
@@ -146,12 +154,39 @@ def Epmotion_Output(Info,Purpose):
         csvFile.close()
 
 #Outputs a written protocol for original rack placement
-def Protcol_Output():
-    name = "Protocol_" +  str(datetime.now())+"_SR.txt"
+def Protcol_Output(Tests):
+    name = Folder_Name + "/Protocol_SR.txt"
     File =  open(name,"w")
 
-    File.write("Epmotion Protocol\n")
-    File.write("Please place Edge Liquid into reservior 1: Well 1")
+    File.write("Epmotion Protocol\n\n")
+    File.write("RACK PLACEMENT \n\n")
+    File.write("1. Place a reservoir into the EpMotion\n")
+    File.write("2. Place 2 24-well racks into the EpMotion\n")
+    File.write("3. Place a box of 50 and 300 ul tips into the EpMotion\n")
+    File.write("4. Ensure that there is a space for a plate in the EpMotion\n")
+    File.write("5. Place a TS_50 and a TS_300 into the EpMotion\n\n")
+
+    File.write("LIQUID LAYOUT \n\n")
+    File.write("1. Place a boat containing dilution liquid into the 1st slot in the reservoir\n")
+    File.write("2. Place a boat containing edge liquid into the 2nd slot in the reservoir\n")
+    for i in range(len(Source)):
+        File.write("%d. Place the Stock %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))
+    File.write("%d. Place %d sterile Epitubes into the second rack from %s to %s\n\n" %(len(Source) + 3, Tests, Rack_Layout[0], Rack_Layout[Tests-1]))
+
+    File.write("EPBLUE PROTOCOL \n\n")
+    File.write("1. Create a new application.\n")
+    File.write("2. Insert the Sample transfer command.\n")
+    File.write("3. Under the Parameter Option, place the Stock 24-well as Source 1\n")
+    File.write("4. Under the Parameter Option, place the reservoir as Source 2\n")
+    File.write("5. Under the Parameter Option, place the Dilution 24-well as Source 3\n")
+    File.write("6. Under the Parameter Option, place the Dilution 24-well as Destination 1\n")
+    File.write("7. Under the Parameter Option, place the Plate as Destination 2\n")
+    File.write("8. Ensure all other setting in the transfer command are satisfactory\n")
+    File.write("9. Click the Sample transfer command.\n")
+    File.write("10. Click on the CSV Command in top bar.\n")
+    File.write("11. Select the Dilution_Command CSV and hit open.\n")
+    File.write("12. Select the Pipette option and hit OK\n")
+    File.write("13. Once finished repeat step 11 with the CSV required for each plate.\n")
 
     File.close()
 
@@ -196,5 +231,5 @@ class Plate():
         self.Wells = []
         for i in range(self.Cols - (self.num_Edgewells * 2)):
             for j in range(self.Rows - (self.num_Edgewells * 2)):
-                Well_Value = list(string.ascii_uppercase)[j]+str(i)
+                Well_Value = list(string.ascii_uppercase)[j]+str(i+1)
                 self.Wells.append(Well_Value)
