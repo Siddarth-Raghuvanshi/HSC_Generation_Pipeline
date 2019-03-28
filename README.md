@@ -43,9 +43,9 @@ Click the ```JMP to EpMotion.bat``` file.
 1. Click the ```File Name``` button and choose the excel output file
 2. Select the type of plate you will be using
 3. Add the volume of each level you would need.
-    i. A good rule of hand is to use ten percent extra (i.e. 110% of the required volume to be added)
+    1. A good rule of hand is to use ten percent extra (i.e. 110% of the required volume to be added)
 4. Add the volume you would like to be added to each plate.
-5. Follow instructions in the protocol file to setup experiment. 
+5. Follow instructions in the protocol file to setup experiment.
 
 
 
