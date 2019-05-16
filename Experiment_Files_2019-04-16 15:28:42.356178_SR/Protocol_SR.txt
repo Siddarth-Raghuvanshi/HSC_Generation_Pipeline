@@ -1,0 +1,34 @@
+Epmotion Protocol
+
+RACK PLACEMENT 
+
+1. Place a reservoir into the EpMotion
+2. Place 2 24-well racks into the EpMotion
+3. Place a box of 50 and 300 ul tips into the EpMotion
+4. Ensure that there is a space for a plate in the EpMotion
+5. Place a TS_50 and a TS_300 into the EpMotion
+
+LIQUID LAYOUT 
+
+1. Place a boat containing dilution liquid into the 1st slot in the reservoir
+2. Place a boat containing edge liquid into the 2nd slot in the reservoir
+3. Place the Stock Red Dye into the A1 well in the first rack
+4. Place the Stock Trypan Blue into the A2 well in the first rack
+5. Place the Stock Purple Dye into the A3 well in the first rack
+6. Place 12 sterile Epitubes into the second rack from A1 to B6
+
+EPBLUE PROTOCOL 
+
+1. Create a new application.
+2. Insert the Sample transfer command.
+3. Under the Parameter Option, place the Stock 24-well as Source 1
+4. Under the Parameter Option, place the reservoir as Source 2
+5. Under the Parameter Option, place the Dilution 24-well as Source 3
+6. Under the Parameter Option, place the Dilution 24-well as Destination 1
+7. Under the Parameter Option, place the Plate as Destination 2
+8. Ensure all other setting in the transfer command are satisfactory
+9. Click the Sample transfer command.
+10. Click on the CSV Command in top bar.
+11. Select the Dilution_Command CSV and hit open.
+12. Select the Pipette option and hit OK
+13. Once finished repeat step 11 with the CSV required for each plate.

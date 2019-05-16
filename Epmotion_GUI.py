@@ -11,7 +11,6 @@ class GUI(object):
         self.row = 0
         self.Files = [[]]
         self.Files.append([])
-        self.num_of_Additional = 0
         self.PlateType = []
         self.Volume = []
         self.Win = Master
@@ -20,17 +19,10 @@ class GUI(object):
     def End(self):
         self.Win.quit()
 
-    def File(self,FileName, Type, Count):
-        if (Count == 0):
-            File = askopenfilename()
-        else:
-            File = askdirectory()
+    def File(self,FileName, Type):
+        File = askopenfilename()
         FileName["text"] = os.path.basename(File)
         self.Files[0].append(File)
-        if(Type == "R"):
-            self.Files[1].append(Count)
-        else:
-            self.Files[1].append(Type)
 
     #Function to create headings and buttons
     def Organizer(self, Heading, Type):
@@ -45,8 +37,7 @@ class GUI(object):
 
         #IF this is an FILE button, follow this code to display it
         if (Type == "FILE"):
-            Count = self.num_of_Additional
-            FileName = Button(F,text = "File Name", command = lambda: self.File(FileName,Type, Count))
+            FileName = Button(F,text = "File Name", command = lambda: self.File(FileName,Type))
             FileName.grid(row = 0, column = 2)
 
         #IF this is a plate, run this code to display the menu
@@ -58,11 +49,11 @@ class GUI(object):
             Plate_Type = OptionMenu(F, Format_Var, *Formats)
             Plate_Type.grid(row = 0, column = 2)
 
+        #If this is a entry box for volumes, run this code.
         else:
             Volume_Var = Entry(F)
             Volume_Var.grid(row = 0, column = 2)
             self.Volume.append(Volume_Var)
-
 
         return F
 
@@ -92,7 +83,7 @@ class GUI(object):
         self.row += 1
 
 
-def Get_Files():
+def Get_Data():
 
     Root = Tk()
     Program = GUI(Root)

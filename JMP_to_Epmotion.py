@@ -1,4 +1,4 @@
-from Epmotion_GUI import Get_Files
+from Epmotion_GUI import Get_Data
 from Convert import *
 import xlrd
 
@@ -21,6 +21,6 @@ def Run(Input, Plate, Dilution_Vol, Factor_Vol):
 
 if __name__ == '__main__':
 
-    Input, Plate, Dil_Volume, Add_Volume  = Get_Files()
+    Input, Plate, Dil_Volume, Add_Volume  = Get_Data()
     JMP_Sheet = JMP_Input(Input)
     Run(JMP_Sheet, Plate, Dil_Volume, Add_Volume)

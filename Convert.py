@@ -67,8 +67,6 @@ def Rearrangment(JMP_Sheet, Layout, Dil_Volume, PlateType, Level_Vol):
 def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
 
     Total_Volume = float(User_Vol)
-    print(Total_Volume)
-
     if not Screwup:
 
         Header = [["Factors", "Source"] + Levels]
@@ -100,11 +98,7 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
                         return (False,name)
                     Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i]
                     Volume_to_add = float(row[i+2])/float(row[1])*Total_Volume
-                    print("Volume_to_add")
-                    print(Volume_to_add)
                     Top_up_Volume = Total_Volume - Volume_to_add #How much liquid needs to be added to top up to the correct concentration
-                    print("Top_up_Volume")
-                    print(Top_up_Volume)
                     if (Volume_to_add%50 > 1):
                         Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%50, "TS_50"])
                         Volume_to_add =  Volume_to_add - Volume_to_add%50
