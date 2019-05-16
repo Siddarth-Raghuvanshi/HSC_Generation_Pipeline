@@ -81,9 +81,10 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
 
     input("\nPress Enter to continue once completed...")
 
-    Max_Dilution_Factor = 1/1000 # Max Dilution before it resorts to cereal dilutions
+    Min_Dilution = 5 # Minimum Voluem of dilution before it resorts to cereal dilutions
     Dilutions = []
     Commands = []
+    cereal_Dilutions = 0
 
     with open("/Users/siddarthraghuvanshi/Documents/Code/HSC_Generation_Pipeline/test_concentrations.csv") as Dilution_Concentrations:
         # I know I should use Pandas, but I'm on a time crunch and I don't want to learn it right now *Future programmers should add it for additional functionaity if they choose*
@@ -96,8 +97,12 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
                 for i in range(len(Levels)):
                     if (int(row[1]) < int(row[i+2])):
                         return (False,name)
-                    Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i]
+                    Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
                     Volume_to_add = float(row[i+2])/float(row[1])*Total_Volume
+                    if (Volume_to_add < Min_Dilution)
+                        Volume_to_add = 10
+                        cereal_Run = True
+                        cereal_Dilutions +=1
                     Top_up_Volume = Total_Volume - Volume_to_add #How much liquid needs to be added to top up to the correct concentration
                     if (Volume_to_add%50 > 1):
                         Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%50, "TS_50"])
@@ -118,6 +123,35 @@ def Dilute(Levels, Factors, User_Vol,Screwup = False, name = ""):
                         Commands.append([2,1,1,Well_Location,300, "TS_300"])
                         Top_up_Volume = Top_up_Volume - 300
                     Dilutions.append(Well_Location)
+                    while(cereal_Dilutions):
+                        cereal_Dilutions = False
+                        Cereal_Location = Well_Location
+                        Well_Location = Rack_Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
+                        Volume_to_add = float(row[i+2])/(float(row[1])/10)*Total_Volume
+                        if (Volume_to_add < Min_Dilution)
+                            Volume_to_add = 10
+                            cereal_Dilutions = True
+                            cereal_Dilutions +=1
+                        Top_up_Volume = Total_Volume - Volume_to_add #How much liquid needs to be added to top up to the correct concentration
+                        if (Volume_to_add%50 > 1):
+                            Commands.append([3,Cereal_Location,1,Well_Location,Volume_to_add%50, "TS_50"])
+                            Volume_to_add =  Volume_to_add - Volume_to_add%50
+                        if (Top_up_Volume%50 > 1):
+                            Commands.append([2,1,1,Well_Location,Top_up_Volume%50, "TS_50"])
+                            Top_up_Volume = Top_up_Volume - Top_up_Volume%50
+                        if (Volume_to_add%300 > 1):
+                            Commands.append([3,Cereal_Location,1,Well_Location,Volume_to_add%300, "TS_300"])
+                            Volume_to_add =  Volume_to_add - Volume_to_add%300
+                        if (Top_up_Volume%300 > 1):
+                            Commands.append([2,1,1,Well_Location,Top_up_Volume%300, "TS_300"])
+                            Top_up_Volume = Top_up_Volume - Top_up_Volume%300
+                        while (Volume_to_add >= 300):
+                            Commands.append([3,Cereal_Location,1,Well_Location,300, "TS_300"])
+                            Volume_to_add =  Volume_to_add - 300
+                        while(Top_up_Volume >= 300):
+                            Commands.append([2,1,1,Well_Location,300, "TS_300"])
+                            Top_up_Volume = Top_up_Volume - 300
+                        Dilutions.append(Well_Location)
                 line_count += 1
 
     Epmotion_Output(Commands,"DILUTIONS")
