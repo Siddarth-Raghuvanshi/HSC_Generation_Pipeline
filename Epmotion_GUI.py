@@ -12,7 +12,7 @@ class GUI(object):
         self.Files = [[]]
         self.Files.append([])
         self.PlateType = []
-        self.Volume = []
+        self.Numbers = []
         self.Win = Master
 
     #Button Functions
@@ -49,11 +49,19 @@ class GUI(object):
             Plate_Type = OptionMenu(F, Format_Var, *Formats)
             Plate_Type.grid(row = 0, column = 2)
 
+        elif (Type == "Edgewells"):
+            Num_Edge = [ 1, 2, 3, 4, 5]
+            Edge_Var = StringVar(self.Win)
+            Edge_Var.set(1)
+            self.Numbers.append(Edge_Var)
+            Edges = OptionMenu(F, Edge_Var, *Num_Edge)
+            Edges.grid(row = 0, column = 2)
+
         #If this is a entry box for volumes, run this code.
         else:
             Volume_Var = Entry(F)
             Volume_Var.grid(row = 0, column = 2)
-            self.Volume.append(Volume_Var)
+            self.Numbers.append(Volume_Var)
 
         return F
 
@@ -69,6 +77,10 @@ class GUI(object):
         self.Plate.grid(row = self.row, column = 0)
         self.row += 1
 
+        self.Edge = self.Organizer("Please select the number of edgewells you would like to include ?", "Edgewells")
+        self.Edge.grid(row = self.row, column = 0)
+        self.row += 1
+
         self.Vol = self.Organizer("What is the Volume of Diluted Factor Needed (uL) ?", "VOL")
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
@@ -82,7 +94,6 @@ class GUI(object):
         self.Done.grid(row = self.row, column = 0, pady = 50)
         self.row += 1
 
-
 def Get_Data():
 
     Root = Tk()
@@ -92,11 +103,12 @@ def Get_Data():
 
     JMP_Excel = Program.Files[0][0]
     Plate_Format = Program.PlateType[0].get()
-    Dil_Volume = Program.Volume[0].get()
-    Add_Volume = Program.Volume[1].get()
+    Edge_Volume = int(Program.Numbers[0].get())
+    Dil_Volume = float(Program.Numbers[1].get())
+    Add_Volume = float(Program.Numbers[2].get())
 
     #Add code submiting for additional commands
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format, Dil_Volume, Add_Volume)
+    return( JMP_Excel, Plate_Format, Dil_Volume, Add_Volume, Edge_Volume)
