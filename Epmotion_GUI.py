@@ -81,11 +81,7 @@ class GUI(object):
         self.Edge.grid(row = self.row, column = 0)
         self.row += 1
 
-        self.Vol = self.Organizer("What is the Volume of Diluted Factor Needed (uL) ?", "VOL")
-        self.Vol.grid(row = self.row, column = 0)
-        self.row += 1
-
-        self.Vol = self.Organizer("What is the Volume of each Factor added to the plate (uL) ?", "VOL")
+        self.Vol = self.Organizer("What is the Volume per Well (uL) ?", "VOL")
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
@@ -104,11 +100,10 @@ def Get_Data():
     JMP_Excel = Program.Files[0][0]
     Plate_Format = Program.PlateType[0].get()
     Edge_Volume = int(Program.Numbers[0].get())
-    Dil_Volume = float(Program.Numbers[1].get())
-    Add_Volume = float(Program.Numbers[2].get())
+    Well_Volume = float(Program.Numbers[1].get())
 
     #Add code submiting for additional commands
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format, Dil_Volume, Add_Volume, Edge_Volume)
+    return( JMP_Excel, Plate_Format, Well_Volume, Edge_Volume)

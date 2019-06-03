@@ -2,15 +2,24 @@ from datetime import datetime
 import csv
 import sys
 import os
-
+import shutil
+from openpyxl import load_workbook
+import xlrd
 
 #Produces a collection of output folders and files which are required
 def Produce_Output_Folder():
     Folder_Name = os.getcwd()+"/Experiment_Files_" + str(datetime.now()) + "_SR"
     os.mkdir(Folder_Name)
-    os.rename("Dilution_Concentrations_SR.csv", Folder_Name+"/Dilution_Concentrations_SR.csv")
+    os.mkdir(Folder_Name+"/EpMotion")
+    os.mkdir(Folder_Name+"/Cytoflex")
+    os.rename("Dilution_Concentrations_SR.csv", Folder_Name+"/EpMotion/Dilution_Concentrations_SR.csv")
 
     return Folder_Name
+
+def Experiment_Summary(Folder_Name):
+    shutil.copy("Automation Summary Template.xlsx", Folder_Name+"/Summary.xlsx")
+
+    Summary = load_workbook(Folder_Name+"/Summary.xlsx")
 
 #Outputs a CSV that is usable by Epmotion
 def Epmotion_Output(Info,Purpose, Folder_Name):
@@ -20,7 +29,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
     if (Purpose == "PLATE"):
         for i in range(len(Info)):
             #Creates a CSV file and feeds in the new data for Epmotion
-            name = Folder_Name + "/Epmotion_Plate_"+ str(i+1) + "_SR.csv"
+            name = Folder_Name + "/EpMotion/Epmotion_Plate_"+ str(i+1) + "_SR.csv"
             with open(name, "w") as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerows(Header_Data)
@@ -28,7 +37,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
                 writer.writerows(Info[i].Commands)
             csvFile.close()
     else:
-        name = Folder_Name + "/Dilution_Commands_SR.csv"
+        name = Folder_Name + "/EpMotion/Dilution_Commands_SR.csv"
         with open(name, "w") as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(Header_Data)
