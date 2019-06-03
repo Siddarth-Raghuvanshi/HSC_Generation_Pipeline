@@ -3,8 +3,9 @@ import csv
 import sys
 import os
 import shutil
-from openpyxl import load_workbook
 import xlrd
+import xlwt
+from xlutils.copy import copy
 
 #Produces a collection of output folders and files which are required
 def Produce_Output_Folder():
@@ -16,10 +17,18 @@ def Produce_Output_Folder():
 
     return Folder_Name
 
-def Experiment_Summary(Folder_Name):
-    shutil.copy("Automation Summary Template.xlsx", Folder_Name+"/Summary.xlsx")
+def Experiment_Summary(Folder_Name, JMP_Sheet,IDs):
+    Summary_Template = xlrd.open_workbook("Automation Summary Template.xlsx")
+    Summary_File = copy(Summary_Template)
+    Output_Sheet = Summary_File.add_sheet("Well Map")
+    Output_Sheet.write(0,0, "Run Name")
+    for i,name in enumerate(IDs):
+        Output_Sheet.write(i+1,0, name)
+    for i in range(JMP_Sheet.ncols):
+        for j, Cell in enumerate(JMP_Sheet.col_values(i)):
+            Output_Sheet.write(j, i + 2, Cell)
+    Summary_File.save(Folder_Name+"/Summary.xls")
 
-    Summary = load_workbook(Folder_Name+"/Summary.xlsx")
 
 #Outputs a CSV that is usable by Epmotion
 def Epmotion_Output(Info,Purpose, Folder_Name):
@@ -45,23 +54,27 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
         csvFile.close()
 
 #Outputs a written protocol for original rack placement
-def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name):
+def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol):
     name = Folder_Name + "/Protocol_SR.txt"
     File =  open(name,"w")
 
     File.write("Epmotion Protocol\n\n")
-    File.write("RACK PLACEMENT \n\n")
+    File.write("DILUTION RACK PLACEMENT \n\n")
     File.write("1. Place a reservoir into the EpMotion\n")
     File.write("2. Place 2 24-well racks into the EpMotion\n")
     File.write("3. Place a box of 50 and 300 ul tips into the EpMotion\n")
     File.write("4. Ensure that there is a space for a plate in the EpMotion\n")
-    File.write("5. Place a TS_50 and a TS_300 into the EpMotion\n\n")
+    File.write("5. Place a TS_10 and a TS_50 into the EpMotion\n\n")
+
+    File.write("MANUAL DILUTIONS \n\n")
+    for i in range(len(Source)):
+        File.write("%d. Dilute Stock %s by adding %f ul into 1500 ul of Media\n\n" % (i + 1, Source[i][0], Needed_Vol[i]))
 
     File.write("LIQUID LAYOUT \n\n")
     File.write("1. Place a boat containing dilution liquid into the 1st slot in the reservoir\n")
     File.write("2. Place a boat containing edge liquid into the 2nd slot in the reservoir\n")
     for i in range(len(Source)):
-        File.write("%d. Place the Stock %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))
+        File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))
     File.write("%d. Place %d sterile Epitubes into the second rack from %s to %s\n\n" %(len(Source) + 3, Dilutions_Num, Rack_Layout[0], Rack_Layout[Dilutions_Num-1]))
 
     File.write("EPBLUE PROTOCOL \n\n")
@@ -78,5 +91,8 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name):
     File.write("11. Select the Dilution_Command CSV and hit open.\n")
     File.write("12. Select the Pipette option and hit OK\n")
     File.write("13. Once finished repeat step 11 with the CSV required for each plate.\n")
+
+    File.write("EXPERIMENT TIP PLACEMENT \n\n")
+    File.write("5. Place a TS_50 and a TS_300 into the EpMotion\n\n")
 
     File.close()

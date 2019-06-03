@@ -18,9 +18,10 @@ if __name__ == '__main__':
 
     Input, Plate, Well_Volume, Edge_Volume  = Get_Data()
     JMP_Sheet = JMP_Input(Input)
-    Output_Plates, Dil_Num, Dil_Commands, Sources = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Volume)
+    Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Volume)
     Folder = Produce_Output_Folder()
     Epmotion_Output(Dil_Commands, "DILUTION", Folder)
     Epmotion_Output(Output_Plates,"PLATE", Folder)
-    Protcol_Output(Dil_Num, Sources, Rack_Layout, Folder)
-    Experiment_Summary(Folder)
+    Protcol_Output(Dil_Num, Sources, Rack_Layout, Folder, Needed_Vol)
+    IDs = ["Name1", "Name2", "NameN"]
+    Experiment_Summary(Folder, JMP_Sheet, IDs)
