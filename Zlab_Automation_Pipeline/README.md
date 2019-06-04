@@ -23,9 +23,10 @@ Make sure that the following libraries are installed:
 * xlrd
 * numpy
 * math
+* xlutils
 * tkinter
 
-This can be easily achieved by installing Anaconda (Python 3) on to the computer.
+This can be easily achieved by installing Anaconda (Python 3) and using pip for the xltuils on to the computer.
 
 # Usage
 
@@ -42,17 +43,15 @@ Click the ```JMP to EpMotion.bat``` file.
 0. Save an Excel output from JMP
 1. Click the ```File Name``` button and choose the excel output file
 2. Select the type of plate you will be using
-3. Add the volume of each level you would need.
-    1. A good rule of hand is to use ten percent extra (i.e. 110% of the required volume to be added)
-4. Add the volume you would like to be added to each plate.
+3. Select the number of Edgewell you would like
+4. Add the volume you would want per well in the plate.
 5. Follow instructions in the protocol file to setup experiment.
 
 
 
 # Notes
 
-There are a few assumptions that the program makes that might be an issue for future experimentation
+There are a few assumptions that the program makes that might be an issue for future experimentation.
 
 * A 24 well rack will be used as a source
 * Only 96 and 384 well plates as outputs are currently supported
-* Assumes that each factor needs the same volume (i.e. Is not optimised for fractional factorials)
