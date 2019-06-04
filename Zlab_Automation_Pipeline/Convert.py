@@ -85,7 +85,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
 
     #Find the dilution which should be done manually so as to not waste any factor
     Desired_Volume = 1345 # 1500 - 20 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
-    Dilution_Conc = pd.read_csv("/Users/siddarthraghuvanshi/Documents/Code/HSC_Generation_Pipeline/Test_Files/test_concentrations.csv")
+    Dilution_Conc = pd.read_csv(name)
     Dilution_Conc.set_index("Factors", inplace = True)
     for i,Factor in enumerate(Factors):
         Vol_times_Conc = sum(User_Vol[i*len(Levels):(i+1)*len(Levels)]*Dilution_Conc.loc[Factor,:][1:])
@@ -95,7 +95,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
     Dilution_Conc["Manually Diluted Concentration"] = Manual_Concentrations
     Dilution_Conc.to_csv(name)
 
-    with open("/Users/siddarthraghuvanshi/Documents/Code/HSC_Generation_Pipeline/Test_Files/test_concentrations.csv") as Dilution_Concentrations:
+    with open(name) as Dilution_Concentrations:
         # I know I should use Pandas, but I'm on a time crunch and I don't want to learn it right now *Future programmers should add it for additional functionaity if they choose*
         csv_reader = csv.reader(Dilution_Concentrations, delimiter=',')
         line_count = 0
