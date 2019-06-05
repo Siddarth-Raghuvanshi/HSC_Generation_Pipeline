@@ -1,0 +1,3 @@
+include Templates/Automation Summary Template.xlsx
+include JMP To Epmotion.bat
+include JMP to Epmotion.command
