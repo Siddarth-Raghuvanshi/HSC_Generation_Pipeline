@@ -9,10 +9,14 @@ from tkinter import messagebox
 import pandas as pd
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
-def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well):
+def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
 
     Source = []
-    num_Factors = JMP_Sheet.row_len(0) - 2
+    num_Y_Vars = 0
+    for Col in range(JMP_Sheet.row_len(0)):
+        if JMP_Sheet.cell_value(1,Col) == "":
+            num_Y_Vars += 1
+    num_Factors = JMP_Sheet.row_len(0) - 1 - num_Y_Vars
     Factor_Vol = Well_Vol/num_Factors
     Levels = set()
     num_Runs = JMP_Sheet.nrows - 1
@@ -24,7 +28,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well):
     #Find the volume for each Level which will be tested
     for i in range(num_Factors):
         for j,Coded_Level in enumerate(Levels):
-            Dil_Volumes.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+20)
+            Dil_Volumes.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+Dead_Vol)
     Levels = list(Levels)
     num_Levels = len(Levels)
     Factors = []
@@ -34,11 +38,11 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well):
         Source.append([JMP_Sheet.cell_value(0,i+1),Layout[i]])
         Factors.append(JMP_Sheet.cell_value(0,i+1))
 
-    Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout, Source, Levels, Factors, Dil_Volumes)
+    Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol)
     if (Dilution_Locations == False):
         while (Dilution_Locations == False):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
-            Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout,Source,Levels, Factors, Dil_Volumes,True,name)
+            Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout,Source,Levels, Factors, Dil_Volumes, Dead_Vol, True,name, )
 
     Plate_wells = len(Plate(PlateType,Edge_Well).Wells)
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
@@ -59,7 +63,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well):
     return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol
 
 #Create a CSV that dilutes the stock concentrations as per the user input.
-def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
+def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, name = ""):
 
     if not Screwup:
 
@@ -69,10 +73,10 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
             writer = csv.writer(csvFile)
             writer.writerows(Header)
             for Factor in Factors:
-                writer.writerow(Factor)
+                writer.writerow([Factor])
         csvFile.close()
         # Don't break up the text, it doesn't seem to display properly.
-        messagebox.showinfo("Dilutions", "A CSV for Dilutions has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
+        messagebox.showinfo("Dilutions", "A File Called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
 
     input("\nPress Enter to continue once completed...")
 
@@ -84,7 +88,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
     Needed_Vol = []
 
     #Find the dilution which should be done manually so as to not waste any factor
-    Desired_Volume = 1345 # 1500 - 20 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
+    Desired_Volume = (1500 - Dead_Vol)*0.9# 1500 - 20 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
     Dilution_Conc = pd.read_csv(name)
     Dilution_Conc.set_index("Factors", inplace = True)
     for i,Factor in enumerate(Factors):
@@ -104,7 +108,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol,Screwup = False, name = ""):
                 line_count += 1
             else:
                 for i in range(len(Levels)):
-                    if (int(row[1]) < int(row[i+2])):
+                    if (float(row[1]) < float(row[i+2])):
                         return (False,name)
                     Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*User_Vol[(line_count-1)*len(Levels)+i]

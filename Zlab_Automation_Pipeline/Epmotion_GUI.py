@@ -85,6 +85,10 @@ class GUI(object):
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
+        self.Vol = self.Organizer("What is the Dead Volume (uL) of the EpMotion for your tubes", "VOL")
+        self.Vol.grid(row = self.row, column = 0)
+        self.row += 1
+
         #Done Button
         self.Done = Button(self.Win, text = "Done", command = self.End)
         self.Done.grid(row = self.row, column = 0, pady = 50)
@@ -99,11 +103,12 @@ def Get_Data():
 
     JMP_Excel = Program.Files[0][0]
     Plate_Format = Program.PlateType[0].get()
-    Edge_Volume = int(Program.Numbers[0].get())
+    Edge_Num = int(Program.Numbers[0].get())
     Well_Volume = float(Program.Numbers[1].get())
+    Dead_Vol = float(Program.Numbers[2].get())
 
     #Add code submiting for additional commands
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format, Well_Volume, Edge_Volume)
+    return( JMP_Excel, Plate_Format, Well_Volume, Edge_Num, Dead_Vol)
