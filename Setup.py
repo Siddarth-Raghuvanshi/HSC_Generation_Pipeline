@@ -8,4 +8,7 @@ setup(name='Zlab_Automation_Pipeline',
       author_email='raghuvanshi.siddarth@gmail.com',
       license='MIT',
       packages=['Zlab_Automation_Pipeline'],
-      zip_safe=True)
+      zip_safe=True,
+      # Python version
+      python_requires='>=3.6',
+      install_requires=["xlutils"])
