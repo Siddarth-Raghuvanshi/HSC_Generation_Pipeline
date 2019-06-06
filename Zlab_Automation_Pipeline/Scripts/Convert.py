@@ -11,6 +11,7 @@ import pandas as pd
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
 def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
 
+    Rack = len(Layout)
     Source = []
     num_Y_Vars = 0
     for Col in range(JMP_Sheet.row_len(0)):
@@ -38,6 +39,20 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
         Source.append([JMP_Sheet.cell_value(0,i+1),Layout[i]])
         Factors.append(JMP_Sheet.cell_value(0,i+1))
 
+
+    #Change the 24 welll Rack to a 96 well plate if there are numerous factors and not that many runs
+    if num_Levels*len(Factors) > 24:
+        if max(Dil_Volumes) < 250:
+            messagebox.showinfo("EpMotion Layout", "The dilutions will be made in a 96 Well Plate as there are too many factors")
+            Layout = []
+            Rack = 96
+            for i in range(12):
+                for j in range(8):
+                    Layout.append(list(string.ascii_uppercase)[j]+str(i+1))
+        else:
+            messagebox.showinfo("Error", "Your experiment has too many Factors/Levels/Runs to run on the EpMotion. Please restructure it in JMP")
+            quit()
+
     Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol)
     if (Dilution_Locations == False):
         while (Dilution_Locations == False):
@@ -54,13 +69,13 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
             if(Trials+j > num_Runs):
                 break
             Row = JMP_Sheet.row_values(Trials+j)
-            for k in range (1,len(Row)-1):
+            for k in range (1,len(Row)- 1 - num_Y_Vars):
                 Feed_Location =  Dilution_Locations[num_Levels*(k-1)+Levels.index(Row[k])] # a bit much should simplfy.
                 Well_Location = Plates[i].Wells[j]
                 Plates[i].Commands.append([3,Feed_Location,2,Well_Location,Factor_Vol, "TS_50"])
         Trials += j
 
-    return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol
+    return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack
 
 #Create a CSV that dilutes the stock concentrations as per the user input.
 def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, name = ""):
@@ -69,14 +84,14 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, n
 
         Header = [["Factors", "Source"] + Levels ]
         name = "Dilution_Concentrations_SR.csv"
-        with open(name, "w") as csvFile:
+        with open("../" + name, "w") as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(Header)
             for Factor in Factors:
                 writer.writerow([Factor])
         csvFile.close()
         # Don't break up the text, it doesn't seem to display properly.
-        messagebox.showinfo("Dilutions", "A File Called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
+        messagebox.showinfo("Dilutions", "A File called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
 
     input("\nPress Enter to continue once completed...")
 
@@ -89,12 +104,12 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, n
 
     #Find the dilution which should be done manually so as to not waste any factor
     Desired_Volume = (1500 - Dead_Vol)*0.9# 1500 - 20 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
-    Dilution_Conc = pd.read_csv(name)
+    Dilution_Conc = pd.read_csv("../" + name)
     Dilution_Conc.set_index("Factors", inplace = True)
     for i,Factor in enumerate(Factors):
         Vol_times_Conc = sum(User_Vol[i*len(Levels):(i+1)*len(Levels)]*Dilution_Conc.loc[Factor,:][1:])
-        Manual_Concentrations.append(Vol_times_Conc//Desired_Volume)
-        Needed_Vol.append((Vol_times_Conc//Desired_Volume*1500)/Dilution_Conc.loc[Factor,:][0])
+        Manual_Concentrations.append(ceil(Vol_times_Conc/Desired_Volume))
+        Needed_Vol.append((ceil(Vol_times_Conc/Desired_Volume)*1500)/Dilution_Conc.loc[Factor,:][0])
 
     Dilution_Conc["Manually Diluted Concentration"] = Manual_Concentrations
     Dilution_Conc.to_csv(name)

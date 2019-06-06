@@ -18,7 +18,9 @@ if __name__ == '__main__':
 
     Input, Plate, Well_Volume, Edge_Num, Dead_Vol  = Get_Data()
     JMP_Sheet = JMP_Input(Input)
-    Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Num, Dead_Vol)
+    Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Num, Dead_Vol)
+    if Rack == 96:
+        Rack_Layout = False #False because the rack layout is no longer needed, perhaps change it to actual 96 well layout in future
     Folder = Produce_Output_Folder()
     Epmotion_Output(Dil_Commands, "DILUTION", Folder)
     Epmotion_Output(Output_Plates,"PLATE", Folder)

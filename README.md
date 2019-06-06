@@ -23,10 +23,16 @@ Make sure that the following libraries are installed:
 * xlrd
 * numpy
 * math
-* xlutils
 * tkinter
 
-This can be easily achieved by installing Anaconda (Python 3) and using pip for the xltuils on to the computer.
+This can be easily achieved by installing Anaconda (Python 3) on the computer
+
+Then install xlutils using the following command:
+
+```
+pip install xlutils
+```
+
 
 # Usage
 
@@ -43,8 +49,9 @@ Click the ```JMP to EpMotion.bat``` file.
 0. Save an Excel output from JMP
 1. Click the ```File Name``` button and choose the excel output file
 2. Select the type of plate you will be using
-3. Select the number of Edgewell you would like
+3. Select the number of Edge wells you would like
 4. Add the volume you would want per well in the plate.
+5. Add the Dead Volume (Traditionally 16 ul)
 5. Follow instructions in the protocol file to setup experiment.
 
 

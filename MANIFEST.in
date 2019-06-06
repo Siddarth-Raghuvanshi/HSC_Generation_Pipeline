@@ -1,4 +1,0 @@
-recursive-include Zlab_Automation_Pipeline/Scripts *
-recursive-include Zlab_Automation_Pipeline/Templates *
-recursive-include Zlab_Automation_Pipeline/Zlab Automation Pipeline.bat
-recursive-include Zlab_Automation_Pipeline/Zlab Automation Pipeline.command
