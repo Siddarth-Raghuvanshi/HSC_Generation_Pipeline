@@ -7,6 +7,7 @@ import string
 from math import ceil
 from tkinter import messagebox
 import pandas as pd
+from pathlib import Path
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
 def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
@@ -17,7 +18,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
     for Col in range(JMP_Sheet.row_len(0)):
         if JMP_Sheet.cell_value(1,Col) == "":
             num_Y_Vars += 1
-    num_Factors = JMP_Sheet.row_len(0) - 1 - num_Y_Vars
+    num_Factors = JMP_Sheet.row_len(1) - 1 - num_Y_Vars
     Factor_Vol = Well_Vol/num_Factors
     Levels = set()
     num_Runs = JMP_Sheet.nrows - 1
@@ -26,11 +27,11 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
     for i in range(num_Factors):
         Levels_for_Factor = set(JMP_Sheet.col_values(i+1,1))
         Levels.update(Levels_for_Factor)
+    Levels = sorted(Levels)
     #Find the volume for each Level which will be tested
     for i in range(num_Factors):
         for j,Coded_Level in enumerate(Levels):
-            Dil_Volumes.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+Dead_Vol)
-    Levels = list(Levels)
+            Dil_Volumes.append(ceil(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+Dead_Vol))
     num_Levels = len(Levels)
     Factors = []
     Total_Tests = num_Levels * num_Factors
@@ -41,7 +42,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
 
 
     #Change the 24 welll Rack to a 96 well plate if there are numerous factors and not that many runs
-    if num_Levels*len(Factors) > 24:
+    if num_Levels*num_Factors > 48-num_Factors:
         if max(Dil_Volumes) < 250:
             messagebox.showinfo("EpMotion Layout", "The dilutions will be made in a 96 Well Plate as there are too many factors")
             Layout = []
@@ -50,14 +51,16 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
                 for j in range(8):
                     Layout.append(list(string.ascii_uppercase)[j]+str(i+1))
         else:
-            messagebox.showinfo("Error", "Your experiment has too many Factors/Levels/Runs to run on the EpMotion. Please restructure it in JMP")
+            messagebox.showinfo("Error", "Your Experiment has a large amount of Factors and Runs, which is beyond the space avalible in the EpMotion. I recommended blocking your experiments to avoid nuisance factors")
             quit()
 
-    Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol)
-    if (Dilution_Locations == False):
-        while (Dilution_Locations == False):
+    name, Screwup = Get_Concentrations(Levels, Factors)
+    if (Screwup):
+        while (Screwup):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
-            Dilution_Locations, name, Dilution_Commands, Needed_Vol = Dilute(Layout,Source,Levels, Factors, Dil_Volumes, Dead_Vol, True,name, )
+            name, Screwup = Get_Concentrations(Levels, Factors,True,name)
+
+    Dilution_Locations, Dilution_Commands, Needed_Vol = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol, name)
 
     Plate_wells = len(Plate(PlateType,Edge_Well).Wells)
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
@@ -77,15 +80,15 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
 
     return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack
 
-#Create a CSV that dilutes the stock concentrations as per the user input.
-def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, name = ""):
+#Create a CSV which contains the user specified dilutions, and asks the user to input these concentrations
+def Get_Concentrations(Levels, Factors,Screwup = False, name = ""):
 
     if not Screwup:
 
         Header = [["Factors", "Source"] + Levels ]
         name = "Dilution_Concentrations_SR.csv"
-        with open("../" + name, "w") as csvFile:
-            writer = csv.writer(csvFile)
+        with open(Path.cwd() / name, "w") as csvFile:
+            writer = csv.writer(csvFile, lineterminator = "\n")
             writer.writerows(Header)
             for Factor in Factors:
                 writer.writerow([Factor])
@@ -95,6 +98,16 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, n
 
     input("\nPress Enter to continue once completed...")
 
+    Concentrations = pd.read_csv(Path.cwd() / name, header = 0)
+    if not (Concentrations.loc[:, "Source":].idxmax(1) == "Source").all():
+        Screwup = True
+
+    return name, Screwup
+
+#Creates a CSV for the epmotion which allows it to dilute the manual concentration to the JMP dilutions.
+# It creates these manual concentrations in such a way to ensure that factor is not wasted.
+def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name):
+
     Min_Dilution = 0.5 # Minimum Volume of dilution before it resorts to cereal dilutions
     Dilutions = []
     Commands = []
@@ -103,19 +116,22 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, n
     Needed_Vol = []
 
     #Find the dilution which should be done manually so as to not waste any factor
-    Desired_Volume = (1500 - Dead_Vol)*0.9# 1500 - 20 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
-    Dilution_Conc = pd.read_csv("../" + name)
+    Desired_Volume = (1500 - Dead_Vol)*0.9# 1500 - 16 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
+    Dilution_Conc = pd.read_csv(Path.cwd() / name)
     Dilution_Conc.set_index("Factors", inplace = True)
     for i,Factor in enumerate(Factors):
+        Source_HighConc_Ratio = Dilution_Conc.loc[Factor]["Source"] / (Dilution_Conc.loc[Factor][len(Levels)]*len(Factors))
         Vol_times_Conc = sum(User_Vol[i*len(Levels):(i+1)*len(Levels)]*Dilution_Conc.loc[Factor,:][1:])
-        Manual_Concentrations.append(ceil(Vol_times_Conc/Desired_Volume))
-        Needed_Vol.append((ceil(Vol_times_Conc/Desired_Volume)*1500)/Dilution_Conc.loc[Factor,:][0])
+        if Source_HighConc_Ratio < 1:
+            messagebox.showinfo("Error", Factor + "'s Source concentration is too low for the concentration needed for its HIGH value to")
+        else:
+            Manual_Concentrations.append(ceil((max(Dilution_Conc.loc[Factor]["Source"]/Source_HighConc_Ratio, Vol_times_Conc/100))*1.1))
+            Needed_Vol.append([Vol_times_Conc/Dilution_Conc.loc[Factor]["Source"], Vol_times_Conc/Manual_Concentrations[i]])
 
     Dilution_Conc["Manually Diluted Concentration"] = Manual_Concentrations
-    Dilution_Conc.to_csv(name)
+    Dilution_Conc.to_csv(Path.cwd() / name)
 
-    with open(name) as Dilution_Concentrations:
-        # I know I should use Pandas, but I'm on a time crunch and I don't want to learn it right now *Future programmers should add it for additional functionaity if they choose*
+    with open(Path.cwd() / name) as Dilution_Concentrations:
         csv_reader = csv.reader(Dilution_Concentrations, delimiter=',')
         line_count = 0
         for row in csv_reader:
@@ -123,68 +139,76 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol,Screwup = False, n
                 line_count += 1
             else:
                 for i in range(len(Levels)):
-                    if (float(row[1]) < float(row[i+2])):
-                        return (False,name)
-                    Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
+                    if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
+                        Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
+                        Destination = 1
+                    else:
+                        Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
+                        Destination = 2
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*User_Vol[(line_count-1)*len(Levels)+i]
+                    cereal_Run = False
                     if (Volume_to_add < Min_Dilution):
-                        Volume_to_add = 10
+                        Volume_to_add = Volume_to_add * 1600/User_Vol[(line_count-1)*len(Levels)+i]
+                        User_Vol[(line_count-1)*len(Levels)+i] = 1600
+                    if (Volume_to_add < Min_Dilution):
+                        Volume_to_add = 0.5
                         cereal_Run = True
                         cereal_Dilutions +=1
                     #How much liquid needs to be added to top up to the correct concentration
                     Top_up_Volume = User_Vol[(line_count-1)*len(Levels)+i] - Volume_to_add
-                    if (Volume_to_add%10 > 1):
-                        Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%10, "TS_10"])
-                        Volume_to_add =  Volume_to_add - Volume_to_add%10
-                    if (Top_up_Volume%10 > 1):
-                        Commands.append([2,1,1,Well_Location,Top_up_Volume%10, "TS_10"])
-                        Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-                    if (Volume_to_add%50 > 1):
-                        Commands.append([1,Source[line_count-1][1],1,Well_Location,Volume_to_add%50, "TS_50"])
-                        Volume_to_add =  Volume_to_add - Volume_to_add%50
-                    if (Top_up_Volume%50 > 1):
-                        Commands.append([2,1,1,Well_Location,Top_up_Volume%50, "TS_50"])
-                        Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-                    while (Volume_to_add >= 50):
-                        Commands.append([1,Source[line_count-1][1],1,Well_Location,50, "TS_50"])
-                        Volume_to_add =  Volume_to_add - 50
-                    while(Top_up_Volume >= 50):
-                        Commands.append([2,1,1,Well_Location,50, "TS_50"])
-                        Top_up_Volume = Top_up_Volume - 50
+                    Commands.extend(Fill_Up(Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination))
                     Dilutions.append(Well_Location)
-                    while(cereal_Dilutions):
-                        cereal_Dilutions = False
+
+                    while(cereal_Run):
+                        cereal_Run = False
                         Cereal_Location = Well_Location
-                        Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
-                        Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]/10)*User_Vol[(line_count-1)*len(Levels)+i]
+                        if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
+                            Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
+                            Destination = 1
+                        else:
+                            Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
+                            Destination = 2
+                        Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/1600)*User_Vol[(line_count-1)*len(Levels)+i]
                         if (Volume_to_add < Min_Dilution):
-                            Volume_to_add = 1
-                            cereal_Dilutions = True
+                            Volume_to_add = Volume_to_add * 1600/User_Vol[(line_count-1)*len(Levels)+i]
+                            User_Vol[(line_count-1)*len(Levels)+i] = 1600
+                        if (Volume_to_add < Min_Dilution):
+                            Volume_to_add = 0.5
+                            cereal_Run = True
                             cereal_Dilutions +=1
-                        #How much liquid needs to be added to top up to the correct concentration
+                        print(row)
+                        print("Cereal_Location")
+                        print(Cereal_Location)
+                        print("Volume to Add")
+                        print(Volume_to_add)
                         Top_up_Volume = User_Vol[(line_count-1)*len(Levels)+i] - Volume_to_add
-                        if (Volume_to_add%10 > 1):
-                            Commands.append([3,Cereal_Location,1,Well_Location,Volume_to_add%10, "TS_10"])
-                            Volume_to_add =  Volume_to_add - Volume_to_add%10
-                        if (Top_up_Volume%10 > 1):
-                            Commands.append([2,1,1,Well_Location,Top_up_Volume%10, "TS_10"])
-                            Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-                        if (Volume_to_add%50 > 1):
-                            Commands.append([3,Cereal_Location,1,Well_Location,Volume_to_add%50, "TS_50"])
-                            Volume_to_add =  Volume_to_add - Volume_to_add%50
-                        if (Top_up_Volume%50 > 1):
-                            Commands.append([2,1,1,Well_Location,Top_up_Volume%50, "TS_50"])
-                            Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-                        while (Volume_to_add >= 50):
-                            Commands.append([3,Cereal_Location,1,Well_Location,50, "TS_50"])
-                            Volume_to_add =  Volume_to_add - 50
-                        while(Top_up_Volume >= 50):
-                            Commands.append([2,1,1,Well_Location,50, "TS_50"])
-                            Top_up_Volume = Top_up_Volume - 50
-                        Dilutions.append(Well_Location)
+w                        Dilutions.append(Well_Location)
                 line_count += 1
 
-    return Dilutions,"No Need", Commands, Needed_Vol
+    return Dilutions, Commands, Needed_Vol
+
+def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination):
+    Commands = []
+    if (Volume_to_add%10 > 1):
+        Commands.append([1,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
+        Volume_to_add =  Volume_to_add - Volume_to_add%10
+    if (Top_up_Volume%10 > 1):
+        Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
+        Top_up_Volume = Top_up_Volume - Top_up_Volume%10
+    if (Volume_to_add%50 > 1):
+        Commands.append([1,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
+        Volume_to_add =  Volume_to_add - Volume_to_add%50
+    if (Top_up_Volume%50 > 1):
+        Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
+        Top_up_Volume = Top_up_Volume - Top_up_Volume%50
+    while (Volume_to_add >= 50):
+        Commands.append([1,Source,Destination,Well_Location,50, "TS_50"])
+        Volume_to_add =  Volume_to_add - 50
+    while(Top_up_Volume >= 50):
+        Commands.append([2,1,Destination,Well_Location,50, "TS_50"])
+        Top_up_Volume = Top_up_Volume - 50
+
+    return Commands
 
 class Plate():
 
