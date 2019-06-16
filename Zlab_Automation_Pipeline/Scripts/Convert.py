@@ -119,18 +119,20 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
     Needed_Vol = []
 
     #Find the dilution which should be done manually so as to not waste any factor
-    Desired_Volume = (1500 - Dead_Vol)*0.9# 1500 - 16 (Dead Volume for EpMotion) * 0.9 (10% Safety Barrier)
     Dilution_Conc = pd.read_csv(Path.cwd() / name)
     Dilution_Conc.set_index("Factors", inplace = True)
     for i,Factor in enumerate(Factors):
+        Desired_Volume = (max(User_Vol[i*len(Levels):(i+1)*len(Levels)]) - Dead_Vol) * 0.9 #Divide by 0.9 giving a 10 % safety buffer
+        if Desired_Volume > Epitube_Vol: #This way if the total volume is too large, then limit it to the epitube, but 90% of the time, it will generally be less the epitube, so it shouldn't be limited by that
+            Desired_Volume = Epitube_Vol - Dead_Vol * 0.9
         Source_HighConc_Ratio = Dilution_Conc.loc[Factor]["Source"] / (Dilution_Conc.loc[Factor][len(Levels)]*len(Factors))
-        Vol_times_Conc = sum(User_Vol[i*len(Levels):(i+1)*len(Levels)]*Dilution_Conc.loc[Factor,:][1:])
+        Vol_times_Conc = sum(User_Vol[i*len(Levels):(i+1)*len(Levels)]*Dilution_Conc.loc[Factor,:][1:])*len(Factors)
         if Source_HighConc_Ratio < 1:
             messagebox.showinfo("Error", Factor + "'s Source concentration is too low for the concentration needed for its HIGH value to fill the plate")
             quit()
         else:
-            Manual_Concentrations.append(ceil(max(Dilution_Conc.loc[Factor]["Source"]/Source_HighConc_Ratio, Vol_times_Conc/Epitube_Vol)*1.1))
-            Needed_Vol.append([(Vol_times_Conc*len(Factors))/Dilution_Conc.loc[Factor]["Source"], (len(Factors)*Vol_times_Conc)/Manual_Concentrations[i]]) # Change Volume
+            Manual_Concentrations.append(ceil(Vol_times_Conc/Desired_Volume))
+            Needed_Vol.append([(Desired_Volume*Manual_Concentrations[i])/Dilution_Conc.loc[Factor]["Source"], Desired_Volume])
 
         if Manual_Concentrations[i] > Dilution_Conc.loc[Factor]["Source"]:
             messagebox.showinfo("Error", "The program's recommended manual dilution is higher than the source concentration. This is generally because you have too many runs and a low source concentration.")
@@ -196,16 +198,16 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
 
 def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination):
     Commands = []
-    if (Top_up_Volume%10 > 0):
+    if (Top_up_Volume%10 > 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-    while (Top_up_Volume % 50 > 0):
+    while (Top_up_Volume % 50 > 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-    if (Volume_to_add%10 > 0):
+    if (Volume_to_add%10 > 0.5):
         Commands.append([1,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
         Volume_to_add =  Volume_to_add - Volume_to_add%10
-    while (Volume_to_add % 50 > 0):
+    while (Volume_to_add % 50 > 0.5):
         Commands.append([1,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
         Volume_to_add =  Volume_to_add - Volume_to_add%50
     if (Volume_to_add%1000 > 0):

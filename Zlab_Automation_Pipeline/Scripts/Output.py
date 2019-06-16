@@ -77,8 +77,8 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
     for i,Factor in enumerate(Source):
         if Needed_Vol[i][0] < 1:
             Initial_Vol = Needed_Vol[i][0]
-            File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
-            File.write("%d b). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+            File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+            File.write("%d b). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
         else:
             File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
     File.write("\n\n")
