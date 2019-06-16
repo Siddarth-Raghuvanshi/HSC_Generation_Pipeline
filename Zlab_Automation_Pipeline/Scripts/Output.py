@@ -58,33 +58,38 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
         csvFile.close()
 
 #Outputs a written protocol for original rack placement
-def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol):
+def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, Media_Vol_Needed):
     name = Folder_Name / "Protocol_SR.txt"
     File =  open(name,"w")
 
     File.write("Epmotion Protocol\n\n")
     File.write("DILUTION RACK PLACEMENT \n\n")
-    File.write("1. Place a 7 slot reservoir rack into the EpMotion\n")
-    if Rack_Layout:
-        File.write("2. Place 2 24-well racks into the EpMotion\n")
+    File.write("1. Place a 7 slot reservoir rack into the EpMotion in C2\n")
+    if Rack_Layout.all():
+        File.write("2. Place 2 24-well racks into the EpMotion in A2 and B2\n")
     else:
-        File.write("2. Place a 24-well rack and a 96-well plate into the EpMotion\n")
-    File.write("3. Place a box of 10 and 50 ul tips into the EpMotion\n")
-    File.write("4. Ensure that there is a space for a plate in the front of the EpMotion\n")
+        File.write("2. Place a 24-well rack and a 96-well plate into the EpMotion in A2 and B2\n")
+    File.write("3. Place a box of 10 and 50 ul tips into the EpMotion in B1 and C1\n")
+    File.write("4. Ensure that there is a space for a plate in the front of the EpMotion in TMX\n")
     File.write("5. Place a TS_10 and a TS_50 into the EpMotion\n\n")
 
     File.write("MANUAL DILUTIONS \n\n")
-    for i in range(len(Source)):
-        File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Source[i][0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+    for i,Factor in enumerate(Source):
+        if Needed_Vol[i][0] < 1:
+            Initial_Vol = Needed_Vol[i][0]
+            File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+            File.write("%d b). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+        else:
+            File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
     File.write("\n\n")
 
     File.write("LIQUID LAYOUT \n\n")
-    File.write("1. Place a reservoir containing dilution liquid into the 1st slot in the reservoir\n")
-    File.write("2. Place a reservoir containing edge liquid into the 2nd slot in the reservoir\n")
+    File.write("1. Place a 25 ml reservoir containing " + str(Media_Vol_Needed) + " ml of dilution liquid into the 1st slot in the reservoir\n")
+    File.write("2. Place a 25 ml reservoir containing edge liquid into the 2nd slot in the reservoir\n")
     for i in range(len(Source)):
         File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))
-    if Rack_Layout:
-        File.write("%d. Place 24 sterile Epitubes into the second rack from %s to %s\n" %( Dilutions_Num, Rack_Layout[0], Rack_Layout[23]))
+    if Rack_Layout.all():
+        File.write("%d. Place 24 sterile Epitubes into the second rack from %s to %s\n" %( i+3, Rack_Layout[0], Rack_Layout[23]))
         File.write("%d. Place %d sterile Epitubes into the second rack from %s to %s\n\n" %(len(Source) + 4 , Dilutions_Num - 24, Rack_Layout[len(Source)], Rack_Layout[Dilutions_Num-24]))
     else:
         File.write("\n")
@@ -92,16 +97,18 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol):
 
     File.write("EPBLUE PROTOCOL \n\n")
     File.write("1. Create a new application.\n")
-    File.write("2. Insert the Sample transfer command.\n")
+    File.write("2. Insert three Sample transfer command.\n\n")
+    File.write("3. Insert three STOP (Us) transfer command.\n\n")
+    File.write("DILUTION PROTOCOL \n")
     File.write("3. Under the Parameter Option, place the Stock 96-well as Source 1\n")
     File.write("4. Under the Parameter Option, place the reservoir as Source 2\n")
-    if Rack_Layout:
+    if Rack_Layout.all():
         File.write("5. Under the Parameter Option, place the Dilution 24-well as Source 3\n")
         File.write("6. Under the Parameter Option, place the Dilution 24-well as Destination 1\n")
     else:
         File.write("5. Under the Parameter Option, place the Dilution 96-well plate as Source 3\n")
         File.write("6. Under the Parameter Option, place the Dilution 96-well plate as Destination 1\n")
-    File.write("7. Under the Parameter Option, place the Plate as Destination 2\n")
+    File.write("7. Under the Parameter Option, place the Plate as Destination 2\n")  #Ensure that thIS IS ONLY FOR PLATE TRANSFER
     File.write("7. Under the Parameter Option, place the Stock 24-well as Destination 2\n")
     File.write("8. Ensure all other setting in the transfer command are satisfactory\n")
     File.write("9. Click the Sample transfer command.\n")
@@ -111,7 +118,7 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol):
     File.write("13. Once finished repeat step 11 with the CSV required for each plate. \n\n")
 
     File.write("EXPERIMENT TIP PLACEMENT \n\n")
-    File.write("1. Place a TS_50 and a TS_300 into the EpMotion\n")
-    File.write("2. Place a box of 50 and 300 ul tips into the EpMotion\n" )
+    File.write("1. Place a TS_50 and a TS_1000 into the EpMotion\n")
+    File.write("2. Place a box of 50 and 1000 ul tips into the EpMotion\n" )
 
     File.close()
