@@ -80,11 +80,11 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
             File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
             File.write("%d b). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
         else:
-            File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor, Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+            File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
     File.write("\n\n")
 
     File.write("LIQUID LAYOUT \n\n")
-    File.write("1. Place a 25 ml reservoir containing " + str(Media_Vol_Needed) + " ml of dilution liquid into the 1st slot in the reservoir\n")
+    File.write("1. Place a 25 ml reservoir containing " + str(Media_Vol_Needed/1000) + " ml of dilution liquid into the 1st slot in the reservoir\n")
     File.write("2. Place a 25 ml reservoir containing edge liquid into the 2nd slot in the reservoir\n")
     for i in range(len(Source)):
         File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))

@@ -22,6 +22,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
             num_Y_Vars += 1
     num_Factors = JMP_Sheet.row_len(1) - 1 - num_Y_Vars
     Factor_Vol = Well_Vol/num_Factors
+    Cell_Vol = 10/num_Factors
     Levels = set()
     num_Runs = JMP_Sheet.nrows - 1
     Dil_Volumes = []
@@ -35,7 +36,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
     for i in range(num_Factors):
         for j,Coded_Level in enumerate(Levels):
             Dil_Volumes.append(ceil(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+Dead_Vol))
-            Cell_Volume.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*10)
+            Cell_Volume.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Cell_Vol)
     num_Levels = len(Levels)
     Factors = []
     Total_Tests = num_Levels * num_Factors
@@ -157,19 +158,20 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     else:
                         Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
                         Destination = 2
-                    Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*User_Vol[(line_count-1)*len(Levels)+i]
+                    Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
+                    Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
                     cereal_Run = False
                     if (Volume_to_add < Min_Dilution):
                         Volume_to_add = Volume_to_add * Epitube_Vol/User_Vol[(line_count-1)*len(Levels)+i]
-                        User_Vol[(line_count-1)*len(Levels)+i] = Epitube_Vol
+                        Volume_to_add = Volume_to_add * Epitube_Vol/(User_Vol[(line_count-1)*len(Levels)+i])
                     if (Volume_to_add < Min_Dilution):
                         Volume_to_add = 0.5
                         cereal_Run = True
                         cereal_Dilutions +=1
                     #How much liquid needs to be added to top up to the correct concentration
-                    Top_up_Volume = User_Vol[(line_count-1)*len(Levels)+i] - Volume_to_add - Cell_Volume[(line_count-1)*len(Levels)+i]
+                    Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volume[(line_count-1)*len(Levels)+i]
                     Dilution_Liquid_Needed += Top_up_Volume
-                    Commands.extend(Fill_Up(Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination))
+                    Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1))
                     Dilutions.append(Well_Location)
 
                     while(cereal_Run):
@@ -181,43 +183,44 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                         else:
                             Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
                             Destination = 2
-                        Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/Epitube_Vol)*User_Vol[(line_count-1)*len(Levels)+i]
+                        Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
+                        Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/Epitube_Vol)*Diluted_Factor_Needed
                         if (Volume_to_add < Min_Dilution):
                             Volume_to_add = Volume_to_add * Epitube_Vol/User_Vol[(line_count-1)*len(Levels)+i]
-                            User_Vol[(line_count-1)*len(Levels)+i] = Epitube_Vol
+                            Diluted_Factor_Needed = Epitube_Vol + Cell_Volume[(line_count-1)*len(Levels)+i]
                         if (Volume_to_add < Min_Dilution):
                             Volume_to_add = 0.5
                             cereal_Run = True
                             cereal_Dilutions +=1
-                        Top_up_Volume = User_Vol[(line_count-1)*len(Levels)+i] - Volume_to_add
-                        Commands.extend(Fill_Up(Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination))
+                        Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volume[(line_count-1)*len(Levels)+i]
+                        Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3))
                         Dilutions.append(Well_Location)
                 line_count += 1
 
     return Dilutions, Commands, Needed_Vol, ceil(Dilution_Liquid_Needed/1000)*1100
 
-def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination):
+def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack):
     Commands = []
-    if (Top_up_Volume%10 > 0.5):
+    if (Top_up_Volume%10 >= 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-    while (Top_up_Volume % 50 > 0.5):
+    while (Top_up_Volume % 50 >= 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-    if (Volume_to_add%10 > 0.5):
-        Commands.append([1,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
+    if (Volume_to_add%10 >= 0.5):
+        Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
         Volume_to_add =  Volume_to_add - Volume_to_add%10
-    while (Volume_to_add % 50 > 0.5):
-        Commands.append([1,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
+    while (Volume_to_add % 50 >= 0.5):
+        Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
         Volume_to_add =  Volume_to_add - Volume_to_add%50
-    if (Volume_to_add%1000 > 0):
-        Commands.append([1,Source,Destination,Well_Location,Volume_to_add%1000, "TS_1000"])
+    if (Volume_to_add%1000 >= 0.5):
+        Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%1000, "TS_1000"])
         Volume_to_add =  Volume_to_add - Volume_to_add%1000
-    if (Top_up_Volume%1000 > 0):
+    if (Top_up_Volume%1000 >= 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%1000, "TS_1000"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%1000
     while (Volume_to_add >= 1000):
-        Commands.append([1,Source,Destination,Well_Location,1000, "TS_1000"])
+        Commands.append([Rack,Source,Destination,Well_Location,1000, "TS_1000"])
         Volume_to_add =  Volume_to_add - 1000
     while(Top_up_Volume >= 1000):
         Commands.append([2,1,Destination,Well_Location,1000, "TS_1000"])
