@@ -162,8 +162,8 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
                     cereal_Run = False
                     if (Volume_to_add < Min_Dilution):
-                        Volume_to_add = Volume_to_add * Epitube_Vol/User_Vol[(line_count-1)*len(Levels)+i]
                         Volume_to_add = Volume_to_add * Epitube_Vol/(User_Vol[(line_count-1)*len(Levels)+i])
+                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volume[(line_count-1)*len(Levels)+i]
                     if (Volume_to_add < Min_Dilution):
                         Volume_to_add = 0.5
                         cereal_Run = True
