@@ -49,8 +49,15 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
                 writer.writerows(Info[i].EdgeData)
                 writer.writerows(Info[i].Commands)
             csvFile.close()
-    else:
+    elif (Purpose == "DILUTION"):
         name = Folder_Name / "EpMotion/Dilution_Commands_SR.csv"
+        with open(name, "w") as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerows(Header_Data)
+            writer.writerows(Info)
+        csvFile.close()
+    else:
+        name = Folder_Name / "EpMotion/Cereal_Commands_SR.csv"
         with open(name, "w") as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(Header_Data)
@@ -102,13 +109,8 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
     File.write("DILUTION PROTOCOL \n")
     File.write("3. Under the Parameter Option, place the Stock 96-well as Source 1\n")
     File.write("4. Under the Parameter Option, place the reservoir as Source 2\n")
-    if Rack_Layout.all():
-        File.write("5. Under the Parameter Option, place the Dilution 24-well as Source 3\n")
-        File.write("6. Under the Parameter Option, place the Dilution 24-well as Destination 1\n")
-    else:
-        File.write("5. Under the Parameter Option, place the Dilution 96-well plate as Source 3\n")
-        File.write("6. Under the Parameter Option, place the Dilution 96-well plate as Destination 1\n")
-    File.write("7. Under the Parameter Option, place the Plate as Destination 2\n")  #Ensure that thIS IS ONLY FOR PLATE TRANSFER
+    File.write("5. Under the Parameter Option, place the Dilution 24-well as Source 3\n")
+    File.write("6. Under the Parameter Option, place the Dilution 24-well as Destination 1\n")
     File.write("7. Under the Parameter Option, place the Stock 24-well as Destination 2\n")
     File.write("8. Ensure all other setting in the transfer command are satisfactory\n")
     File.write("9. Click the Sample transfer command.\n")

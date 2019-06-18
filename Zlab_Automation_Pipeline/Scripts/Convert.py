@@ -26,7 +26,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
     Levels = set()
     num_Runs = JMP_Sheet.nrows - 1
     Dil_Volumes = []
-    Cell_Volume = []
+    Cell_Volumes = []
     #Used to take into account fractional factorial, i.e. uses all of the levels created by all the factors
     for i in range(num_Factors):
         Levels_for_Factor = set(JMP_Sheet.col_values(i+1,1))
@@ -36,7 +36,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
     for i in range(num_Factors):
         for j,Coded_Level in enumerate(Levels):
             Dil_Volumes.append(ceil(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Factor_Vol*1.1+Dead_Vol))
-            Cell_Volume.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Cell_Vol)
+            Cell_Volumes.append(JMP_Sheet.col_values(i+1,1).count(Coded_Level)*Cell_Vol)
     num_Levels = len(Levels)
     Factors = []
     Total_Tests = num_Levels * num_Factors
@@ -64,7 +64,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
             name, Screwup = Get_Concentrations(Levels, Factors,True,name)
 
-    Dilution_Locations, Dilution_Commands, Needed_Vol, Media_Vol_Needed = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol, name, Cell_Volume)
+    Dilution_Locations, Dilution_Commands, Needed_Vol, Media_Vol_Needed, Cereal_Commands, Source_Location = Dilute(Layout, Source, Levels, Factors, Dil_Volumes, Dead_Vol, name, Cell_Volumes)
 
     Plate_wells = len(Plate(PlateType,Edge_Well).Wells)
     num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
@@ -76,13 +76,14 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
             if(Trials+j > num_Runs):
                 break
             Row = JMP_Sheet.row_values(Trials+j)
-            for k in range (1,len(Row)- 1 - num_Y_Vars):
+            for k in range (1,len(Row) - num_Y_Vars):
                 Feed_Location =  Dilution_Locations[num_Levels*(k-1)+Levels.index(Row[k])] # a bit much should simplfy.
+                Source_Rack = Source_Location[num_Levels*(k-1)+Levels.index(Row[k])]
                 Well_Location = Plates[i].Wells[j]
-                Plates[i].Commands.append([3,Feed_Location,2,Well_Location,10, "TS_50"])#Factor_Vol, "TS_50"])
+                Plates[i].Commands.append([Source_Rack,Feed_Location,2,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])#Factor_Vol, "TS_50"])
         Trials += j
 
-    return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack, Media_Vol_Needed
+    return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands
 
 #Create a CSV which contains the user specified dilutions, and asks the user to input these concentrations
 def Get_Concentrations(Levels, Factors,Screwup = False, name = ""):
@@ -110,11 +111,13 @@ def Get_Concentrations(Levels, Factors,Screwup = False, name = ""):
 
 #Creates a CSV for the epmotion which allows it to dilute the manual concentration to the JMP dilutions.
 # It creates these manual concentrations in such a way to ensure that factor is not wasted.
-def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume):
+def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volumes):
 
     Min_Dilution = 0.5 # Minimum Volume of dilution before it resorts to cereal dilutions
     Dilutions = []
     Commands = []
+    Source_Location = []
+    Cereal_Commands = []
     cereal_Dilutions = 0
     Manual_Concentrations = []
     Needed_Vol = []
@@ -155,24 +158,28 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
                         Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
                         Destination = 1
+                        Source_Location.append(3)
                     else:
                         Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
-                        Destination = 2
+                        Destination = 3
+                        Source_Location.append(1)
                     Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
                     cereal_Run = False
                     if (Volume_to_add < Min_Dilution):
                         Volume_to_add = Volume_to_add * Epitube_Vol/(User_Vol[(line_count-1)*len(Levels)+i])
-                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volume[(line_count-1)*len(Levels)+i]
+                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
                     if (Volume_to_add < Min_Dilution):
                         Volume_to_add = 0.5
                         cereal_Run = True
                         cereal_Dilutions +=1
                     #How much liquid needs to be added to top up to the correct concentration
-                    Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volume[(line_count-1)*len(Levels)+i]
+                    Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
                     Dilution_Liquid_Needed += Top_up_Volume
-                    Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1))
-                    Dilutions.append(Well_Location)
+                    if not cereal_Run:
+                        Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1, cereal_Run))
+                    else:
+                        Cereal_Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1, cereal_Run))
 
                     while(cereal_Run):
                         cereal_Run = False
@@ -180,37 +187,42 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                         if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
                             Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
                             Destination = 1
+                            Source_Location[(line_count-1)*len(Levels)+i] = 3
                         else:
                             Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
-                            Destination = 2
+                            Destination = 3
+                            Source_Location[(line_count-1)*len(Levels)+i] = 1
                         Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
                         Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/Epitube_Vol)*Diluted_Factor_Needed
                         if (Volume_to_add < Min_Dilution):
                             Volume_to_add = Volume_to_add * Epitube_Vol/User_Vol[(line_count-1)*len(Levels)+i]
-                            Diluted_Factor_Needed = Epitube_Vol + Cell_Volume[(line_count-1)*len(Levels)+i]
+                            Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
                         if (Volume_to_add < Min_Dilution):
                             Volume_to_add = 0.5
                             cereal_Run = True
                             cereal_Dilutions +=1
-                        Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volume[(line_count-1)*len(Levels)+i]
-                        Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3))
-                        Dilutions.append(Well_Location)
+                        Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
+                        if not cereal_Run:
+                            Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3, cereal_Run))
+                        else:
+                            Cereal_Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3, cereal_Run))
+                    Dilutions.append(Well_Location)
                 line_count += 1
 
-    return Dilutions, Commands, Needed_Vol, ceil(Dilution_Liquid_Needed/1000)*1100
+    return Dilutions, Commands, Needed_Vol, ceil(Dilution_Liquid_Needed/1000)*1100, Cereal_Commands, Source_Location
 
-def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack):
+def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack, Cereal):
     Commands = []
     if (Top_up_Volume%10 >= 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-    while (Top_up_Volume % 50 >= 0.5):
+    if (Top_up_Volume % 50 >= 0.5) and not Cereal:
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
     if (Volume_to_add%10 >= 0.5):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
         Volume_to_add =  Volume_to_add - Volume_to_add%10
-    while (Volume_to_add % 50 >= 0.5):
+    if (Volume_to_add % 50 >= 0.5 and not Cereal):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
         Volume_to_add =  Volume_to_add - Volume_to_add%50
     if (Volume_to_add%1000 >= 0.5):
@@ -234,7 +246,7 @@ class Plate():
         if(Plate_Type == "96 Well"):
             self.Rows = 8
             self.Cols = 12
-            self.Vol = 250
+            self.Vol = 100
             self.Tool = 'TS_1000'
 
         elif(Plate_Type == "384 Well"):
