@@ -155,7 +155,9 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                 line_count += 1
             else:
                 for i in range(len(Levels)):
-                    if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
+                    Index = (line_count-1)*len(Levels)+i+cereal_Dilutions
+                    Rack = 1
+                    if (Index < 24):
                         Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
                         Destination = 1
                         Source_Location.append(3)
@@ -177,19 +179,23 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
                     Dilution_Liquid_Needed += Top_up_Volume
                     if not cereal_Run:
-                        Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1, cereal_Run))
+                        Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
                     else:
-                        Cereal_Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, 1, cereal_Run))
+                        Cereal_Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
 
                     while(cereal_Run):
+                        Index = (line_count-1)*len(Levels)+i+cereal_Dilutions
                         cereal_Run = False
                         Cereal_Location = Well_Location
-                        if ((line_count-1)*len(Levels)+i+cereal_Dilutions < 24):
-                            Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
+                        Rack = 3 
+                        if Index > 24:
+                            Rack = 1
+                        if (Index < 24):
+                            Well_Location = Layout[Index]
                             Destination = 1
                             Source_Location[(line_count-1)*len(Levels)+i] = 3
                         else:
-                            Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
+                            Well_Location = Layout[Index - 24 + len(Factors)]
                             Destination = 3
                             Source_Location[(line_count-1)*len(Levels)+i] = 1
                         Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
@@ -203,32 +209,32 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                             cereal_Dilutions +=1
                         Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
                         if not cereal_Run:
-                            Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3, cereal_Run))
+                            Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
                         else:
-                            Cereal_Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, 3, cereal_Run))
+                            Cereal_Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
                     Dilutions.append(Well_Location)
                 line_count += 1
 
     return Dilutions, Commands, Needed_Vol, ceil(Dilution_Liquid_Needed/1000)*1100, Cereal_Commands, Source_Location
 
-def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack, Cereal):
+def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack):
     Commands = []
-    if (Top_up_Volume%10 >= 0.5):
+    if (Top_up_Volume%10 >= 0.5) and (Top_up_Volume < 10):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-    if (Top_up_Volume % 50 >= 0.5) and not Cereal:
+    if (Top_up_Volume % 50 >= 0.5) and (Top_up_Volume < 45):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
-    if (Volume_to_add%10 >= 0.5):
+    if (Volume_to_add % 10 >= 0.5) and (Volume_to_add < 10):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
         Volume_to_add =  Volume_to_add - Volume_to_add%10
-    if (Volume_to_add % 50 >= 0.5 and not Cereal):
+    if (Volume_to_add % 50 >= 0.5) and (Volume_to_add < 45):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
         Volume_to_add =  Volume_to_add - Volume_to_add%50
-    if (Volume_to_add%1000 >= 0.5):
+    if (Volume_to_add % 1000 >= 0.5):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%1000, "TS_1000"])
         Volume_to_add =  Volume_to_add - Volume_to_add%1000
-    if (Top_up_Volume%1000 >= 0.5):
+    if (Top_up_Volume % 1000 >= 0.5):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%1000, "TS_1000"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%1000
     while (Volume_to_add >= 1000):
@@ -280,5 +286,5 @@ class Plate():
         self.Wells = []
         for i in range(self.Cols - (self.num_Edgewells * 2)):
             for j in range(self.Rows - (self.num_Edgewells * 2)):
-                Well_Value = list(string.ascii_uppercase)[j]+str(i+1)
+                Well_Value = list(string.ascii_uppercase)[j+self.num_Edgewells]+str(i+1+self.num_Edgewells)
                 self.Wells.append(Well_Value)
