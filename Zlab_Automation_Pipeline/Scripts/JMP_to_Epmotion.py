@@ -20,7 +20,7 @@ if __name__ == '__main__':
     #Layout of 24 well racks in the EpMotion
     Rack_Layout = numpy.arange(1,25,1)
 
-    Input, Plate, Well_Volume, Edge_Num, Dead_Vol  = Get_Data()
+    Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = Get_Data()
     #Check if the experiment is blocked, and if so divide them into blocks
     Temp_Files =  [Input]
     num_Blocks = 0
@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     for i, Folder in enumerate(Folders[1:]):
         JMP_Sheet = JMP_Input(Temp_Files[i])
-        Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands  = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Num, Dead_Vol)
+        Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands  = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Num, Dead_Vol,Added_Cell_Vol)
 
         if Rack == 96:
             Rack_Layout = False #False because the rack layout is no longer needed, perhaps change it to actual 96 well layout in future

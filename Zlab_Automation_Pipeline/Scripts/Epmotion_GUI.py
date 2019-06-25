@@ -89,6 +89,10 @@ class GUI(object):
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
+        self.Vol = self.Organizer("What is the Volume (uL) of cells you would like to add to your cells", "VOL")
+        self.Vol.grid(row = self.row, column = 0)
+        self.row += 1
+
         #Done Button
         self.Done = Button(self.Win, text = "Done", command = self.End)
         self.Done.grid(row = self.row, column = 0, pady = 50)
@@ -106,6 +110,7 @@ def Get_Data():
     Edge_Num = int(Program.Numbers[0].get())
     Well_Volume = float(Program.Numbers[1].get())
     Dead_Vol = float(Program.Numbers[2].get())
+    Added_Cell_Vol = float(Program.Numbers[3].get())
 
     #Add code submiting for additional commands
 

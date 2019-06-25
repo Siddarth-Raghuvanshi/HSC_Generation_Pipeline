@@ -12,7 +12,7 @@ from pathlib import Path
 Epitube_Vol = 1600 # I know that global variables are considered to be terrible, but frankly this is a much more elegant solution than anything else I've had.
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
-def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
+def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol, Added_Cell_Vol):
 
     Rack = len(Layout)
     Source = []
@@ -22,7 +22,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
             num_Y_Vars += 1
     num_Factors = JMP_Sheet.row_len(1) - 1 - num_Y_Vars
     Factor_Vol = Well_Vol/num_Factors
-    Cell_Vol = 10/num_Factors
+    Cell_Vol = Added_Cell_Vol/num_Factors
     Levels = set()
     num_Runs = JMP_Sheet.nrows - 1
     Dil_Volumes = []
@@ -80,7 +80,7 @@ def Rearrangment(JMP_Sheet, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol):
                 Feed_Location =  Dilution_Locations[num_Levels*(k-1)+Levels.index(Row[k])] # a bit much should simplfy.
                 Source_Rack = Source_Location[num_Levels*(k-1)+Levels.index(Row[k])]
                 Well_Location = Plates[i].Wells[j]
-                Plates[i].Commands.append([Source_Rack,Feed_Location,2,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])#Factor_Vol, "TS_50"])
+                Plates[i].Commands.append([Source_Rack,Feed_Location,3,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])#Factor_Vol, "TS_50"])
         Trials += j
 
     return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands
@@ -159,11 +159,11 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     Rack = 1
                     if (Index < 24):
                         Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
-                        Destination = 1
+                        Destination = 2
                         Source_Location.append(3)
                     else:
                         Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
-                        Destination = 3
+                        Destination = 1
                         Source_Location.append(1)
                     Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
@@ -187,16 +187,16 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                         Index = (line_count-1)*len(Levels)+i+cereal_Dilutions
                         cereal_Run = False
                         Cereal_Location = Well_Location
-                        Rack = 3 
+                        Rack = 2
                         if Index > 24:
                             Rack = 1
                         if (Index < 24):
                             Well_Location = Layout[Index]
-                            Destination = 1
+                            Destination = 2
                             Source_Location[(line_count-1)*len(Levels)+i] = 3
                         else:
                             Well_Location = Layout[Index - 24 + len(Factors)]
-                            Destination = 3
+                            Destination = 1
                             Source_Location[(line_count-1)*len(Levels)+i] = 1
                         Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
                         Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/Epitube_Vol)*Diluted_Factor_Needed
