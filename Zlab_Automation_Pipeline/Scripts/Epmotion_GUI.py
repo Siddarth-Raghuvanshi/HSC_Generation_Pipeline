@@ -89,7 +89,7 @@ class GUI(object):
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
-        self.Vol = self.Organizer("What is the Volume (uL) of cells you would like to add to your cells", "VOL")
+        self.Vol = self.Organizer("What is the Volume (uL) of cells you would like to add to your wells", "VOL")
         self.Vol.grid(row = self.row, column = 0)
         self.row += 1
 
@@ -116,4 +116,4 @@ def Get_Data():
 
     Root.destroy()
 
-    return( JMP_Excel, Plate_Format, Well_Volume, Edge_Num, Dead_Vol)
+    return( JMP_Excel, Plate_Format, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol)

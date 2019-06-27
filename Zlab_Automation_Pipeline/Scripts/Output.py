@@ -2,6 +2,8 @@ from datetime import datetime
 import csv
 import sys
 import shutil
+import pandas as pd
+import numpy as np
 import os
 import xlrd
 import xlwt
@@ -33,36 +35,67 @@ def Experiment_Summary(Folder_Name, JMP_Sheet,IDs):
             Output_Sheet.write(j, i + 2, Cell)
     Summary_File.save(Folder_Name / "Summary.xls")
 
-
 #Outputs a CSV that is usable by Epmotion
 def Epmotion_Output(Info,Purpose, Folder_Name):
     #Header
     Header_Data = [["Rack","Source","Rack","Destination","Volume","Tool"]]
 
+
     if (Purpose == "PLATE"):
         for i in range(len(Info)):
             #Creates a CSV file and feeds in the new data for Epmotion
+            Optimized_Commands = Script_Optimizer(Info[i].Commands, Purpose)
             name = Folder_Name / ("EpMotion/Epmotion_Plate_"+ str(i+1) + "_SR.csv")
             with open(name, "w") as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerows(Header_Data)
-                writer.writerows(Info[i].EdgeData)
-                writer.writerows(Info[i].Commands)
+                #writer.writerows(Info[i].EdgeData) No longer needed as it is incorporated into our EpMotion Templates, but its good to keep for testing and possible future use
+                writer.writerows(Optimized_Commands)
             csvFile.close()
     elif (Purpose == "DILUTION"):
-        name = Folder_Name / "EpMotion/Dilution_Commands_SR.csv"
-        with open(name, "w") as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerows(Header_Data)
-            writer.writerows(Info)
-        csvFile.close()
+        Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
+        Names = [Folder_Name / "EpMotion/Factor_Prep_SR_Base.csv", Folder_Name / "EpMotion/Factor_Prep_SR_P10.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Final.csv"]
+        for i,Name in enumerate(Names):
+            with open(Name , "w") as csvFile:
+                writer = csv.writer(csvFile)
+                writer.writerows(Header_Data)
+                writer.writerows(Optimized_Commands[i])
+            csvFile.close()
     else:
-        name = Folder_Name / "EpMotion/Cereal_Commands_SR.csv"
-        with open(name, "w") as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerows(Header_Data)
-            writer.writerows(Info)
-        csvFile.close()
+        Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
+        Names = [Folder_Name / "EpMotion/Dilution_Prep_Base.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_P10.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_Final.csv"]
+        for i,Name in enumerate(Names):
+            with open(Name , "w") as csvFile:
+                writer = csv.writer(csvFile)
+                writer.writerows(Header_Data)
+                writer.writerows(Optimized_Commands[i])
+            csvFile.close()
+
+#Optimizes the layout, so that the EpMotion would use the least amount of times and time
+def Script_Optimizer(Info, Purpose):
+    Data = pd.DataFrame(Info, columns = ["S_Rack","Source","D_Rack","Destination","Volume","Tool"])
+
+    if(Purpose == "PLATE"):
+        Plate_Commands = Data.sort_values(["S_Rack", "Source"])
+        return Plate_Commands.values.tolist()
+    else:
+        Base_Values = ((Data.sort_values("Volume", ascending = False)
+                    .drop_duplicates(subset = ['D_Rack', "Destination"]))
+                    .sort_values(["Tool","S_Rack", "Source"])
+                    .reset_index(drop = True))
+
+        Tools_Used = Base_Values["Tool"].unique()
+
+        Factor_Top_Up_Values = (Data.append(Base_Values)
+                                .drop_duplicates(keep = False)
+                                .sort_values(["Tool", "S_Rack", "Source"])
+                                .reset_index(drop = True))
+        P_10_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] == "TS_10"]
+        Large_P_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] != "TS_10"]
+
+        Tools_Used = np.append(Tools_Used, (Factor_Top_Up_Values["Tool"].unique()))
+
+        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist()], np.unique(Tools_Used).tolist()
 
 #Outputs a written protocol for original rack placement
 def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, Media_Vol_Needed):
