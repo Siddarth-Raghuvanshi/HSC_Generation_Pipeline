@@ -115,12 +115,18 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
 
     File.write("MANUAL DILUTIONS \n\n")
     for i,Factor in enumerate(Source):
+        Initial_Vol = Needed_Vol[i][0]
+        Media_Volume = Needed_Vol[i][1]
         if Needed_Vol[i][0] < 1:
-            Initial_Vol = Needed_Vol[i][0]
-            File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
-            File.write("%d b). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
-        else:
-            File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Needed_Vol[i][0], Needed_Vol[i][1] - Needed_Vol[i][0]))
+            Media_Volume = 1/(Needed_Vol[i][0]/Needed_Vol[i][1])
+            Initial_Vol =  1
+            if Media_Volume > 1600:
+                Initial_Vol = Needed_Vol[i][0]*1600
+                File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, 1599))
+                File.write("%d b). Dilute the created %s dilution by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, Needed_Vol[i][1] - Initial_Vol))
+                File.write("Test the dilution out real quick, I haven't tested this before")
+                continue
+        File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, Media_Volume - Initial_Vol))
     File.write("\n\n")
 
     File.write("LIQUID LAYOUT \n\n")

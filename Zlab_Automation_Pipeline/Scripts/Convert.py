@@ -4,7 +4,7 @@
 import csv
 import numpy as np
 import string
-from math import ceil
+from math import ceil, floor
 from tkinter import messagebox
 import pandas as pd
 from pathlib import Path
@@ -125,6 +125,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
     #Find the dilution which should be done manually so as to not waste any factor
     Dilution_Conc = pd.read_csv(Path.cwd() / name)
     Dilution_Conc.set_index("Factors", inplace = True)
+    print(User_Vol)
     for i,Factor in enumerate(Factors):
         Desired_Volume = (max(User_Vol[i*len(Levels):(i+1)*len(Levels)]) - Dead_Vol) * 0.9 #Divide by 0.9 giving a 10 % safety buffer
         if Desired_Volume > Epitube_Vol: #This way if the total volume is too large, then limit it to the epitube, but 90% of the time, it will generally be less the epitube, so it shouldn't be limited by that
@@ -136,8 +137,12 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
             quit()
         else:
             Manual_Concentrations.append(ceil(Vol_times_Conc/Desired_Volume))
-            Needed_Vol.append([(Desired_Volume*Manual_Concentrations[i])/Dilution_Conc.loc[Factor]["Source"], Desired_Volume])
-
+            Desired_Volume = ceil((Desired_Volume + 2*Dead_Vol) * 1.1**2) # Increasing the volume to be larger again and thereby allowing for extra volume in the tube for the epMotion
+            Dilution_Amount = (Desired_Volume*Manual_Concentrations[i])/Dilution_Conc.loc[Factor]["Source"]
+            Needed_Vol.append([Dilution_Amount, Desired_Volume])
+            print(Desired_Volume)
+            print(Manual_Concentrations)
+            print(Dilution_Conc.loc[Factor]["Source"])
         if Manual_Concentrations[i] > Dilution_Conc.loc[Factor]["Source"]:
             messagebox.showinfo("Error", "The program's recommended manual dilution is higher than the source concentration. This is generally because you have too many runs and a low source concentration.")
             quit()
