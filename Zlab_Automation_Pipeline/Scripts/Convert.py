@@ -127,7 +127,7 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
     Dilution_Conc.set_index("Factors", inplace = True)
     print(User_Vol)
     for i,Factor in enumerate(Factors):
-        Desired_Volume = (max(User_Vol[i*len(Levels):(i+1)*len(Levels)]) - Dead_Vol) * 0.9 #Divide by 0.9 giving a 10 % safety buffer
+        Desired_Volume = floor((User_Vol[(i+1)*len(Levels)-1] - Dead_Vol) * 0.9) #Divide by 0.9 giving a 10 % safety buffer, this is because the volume was previously increased as a safety buffer
         if Desired_Volume > Epitube_Vol: #This way if the total volume is too large, then limit it to the epitube, but 90% of the time, it will generally be less the epitube, so it shouldn't be limited by that
             Desired_Volume = Epitube_Vol - Dead_Vol * 0.9
         Source_HighConc_Ratio = Dilution_Conc.loc[Factor]["Source"] / (Dilution_Conc.loc[Factor][len(Levels)]*len(Factors))
