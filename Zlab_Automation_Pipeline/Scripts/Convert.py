@@ -140,9 +140,6 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
             Desired_Volume = ceil((Desired_Volume + 2*Dead_Vol) * 1.1**2) # Increasing the volume to be larger again and thereby allowing for extra volume in the tube for the epMotion
             Dilution_Amount = (Desired_Volume*Manual_Concentrations[i])/Dilution_Conc.loc[Factor]["Source"]
             Needed_Vol.append([Dilution_Amount, Desired_Volume])
-            print(Desired_Volume)
-            print(Manual_Concentrations)
-            print(Dilution_Conc.loc[Factor]["Source"])
         if Manual_Concentrations[i] > Dilution_Conc.loc[Factor]["Source"]:
             messagebox.showinfo("Error", "The program's recommended manual dilution is higher than the source concentration. This is generally because you have too many runs and a low source concentration.")
             quit()
@@ -174,10 +171,10 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
                     Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
                     cereal_Run = False
                     if (Volume_to_add < Min_Dilution):
-                        Volume_to_add = Volume_to_add * Epitube_Vol/(User_Vol[(line_count-1)*len(Levels)+i])
-                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
-                    if (Volume_to_add < Min_Dilution):
+                        Diluted_Factor_Needed = 0.5 * Diluted_Factor_Needed/Volume_to_add
                         Volume_to_add = 0.5
+                    if (Diluted_Factor_Needed > Epitube_Vol):
+                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
                         cereal_Run = True
                         cereal_Dilutions +=1
                     #How much liquid needs to be added to top up to the correct concentration

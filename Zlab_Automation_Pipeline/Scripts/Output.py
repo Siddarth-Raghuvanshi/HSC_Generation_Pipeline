@@ -93,6 +93,9 @@ def Script_Optimizer(Info, Purpose):
         P_10_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] == "TS_10"]
         Large_P_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] != "TS_10"]
 
+        if not Large_P_Commands.values.tolist():
+            
+
         Tools_Used = np.append(Tools_Used, (Factor_Top_Up_Values["Tool"].unique()))
 
         return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist()], np.unique(Tools_Used).tolist()
@@ -119,7 +122,7 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
         Media_Volume = Needed_Vol[i][1]
         if Needed_Vol[i][0] < 1:
             Media_Volume = 1/(Needed_Vol[i][0]/Needed_Vol[i][1])
-            Initial_Vol =  1
+            Initial_Amount =  1
             if Media_Volume > 1600:
                 Initial_Vol = Needed_Vol[i][0]*1600
                 File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, 1599))
