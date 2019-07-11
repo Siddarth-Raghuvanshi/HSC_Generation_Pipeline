@@ -125,7 +125,6 @@ def Dilute(Layout,Source, Levels, Factors, User_Vol, Dead_Vol, name, Cell_Volume
     #Find the dilution which should be done manually so as to not waste any factor
     Dilution_Conc = pd.read_csv(Path.cwd() / name)
     Dilution_Conc.set_index("Factors", inplace = True)
-    print(User_Vol)
     for i,Factor in enumerate(Factors):
         Desired_Volume = floor((User_Vol[(i+1)*len(Levels)-1] - Dead_Vol) * 0.9) #Divide by 0.9 giving a 10 % safety buffer, this is because the volume was previously increased as a safety buffer
         if Desired_Volume > Epitube_Vol: #This way if the total volume is too large, then limit it to the epitube, but 90% of the time, it will generally be less the epitube, so it shouldn't be limited by that
@@ -224,15 +223,15 @@ def Fill_Up(Source, Top_up_Volume, Volume_to_add, Well_Location, Destination, Ra
     if (Top_up_Volume%10 >= 0.5) and (Top_up_Volume < 10):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%10, "TS_10"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
-    if (Top_up_Volume % 50 >= 0.5) and (Top_up_Volume < 45):
+    if (Top_up_Volume % 50 >= 0.5) and (Top_up_Volume < 50):
         Commands.append([2,1,Destination,Well_Location,Top_up_Volume%50, "TS_50"])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
     if (Volume_to_add % 10 >= 0.5) and (Volume_to_add < 10):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%10, "TS_10"])
-        Volume_to_add =  Volume_to_add - Volume_to_add%10
-    if (Volume_to_add % 50 >= 0.5) and (Volume_to_add < 45):
+        Volume_to_add = Volume_to_add - Volume_to_add%10
+    if (Volume_to_add % 50 >= 0.5) and (Volume_to_add < 50):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%50, "TS_50"])
-        Volume_to_add =  Volume_to_add - Volume_to_add%50
+        Volume_to_add = Volume_to_add - Volume_to_add%50
     if (Volume_to_add % 1000 >= 0.5):
         Commands.append([Rack,Source,Destination,Well_Location,Volume_to_add%1000, "TS_1000"])
         Volume_to_add =  Volume_to_add - Volume_to_add%1000

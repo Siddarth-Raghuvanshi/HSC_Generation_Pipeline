@@ -43,7 +43,7 @@ if __name__ == '__main__':
             Rack_Layout = False #False because the rack layout is no longer needed, perhaps change it to actual 96 well layout in future
         if len(Cereal_Commands) != 0: #Only run cereal commands if there are some
             Epmotion_Output(Cereal_Commands,"CEREAL", Folder)
-        Epmotion_Output(Dil_Commands, "DILUTION", Folder)
+        Epmotion_Output(Dil_Commands, "FACTOR", Folder)
         Epmotion_Output(Output_Plates,"PLATE", Folder)
         Protcol_Output(Dil_Num, Sources, Rack_Layout, Folder, Needed_Vol, Media_Vol_Needed)
     IDs = ["Name1", "Name2", "NameN"]

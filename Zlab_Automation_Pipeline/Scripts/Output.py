@@ -52,10 +52,12 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
                 #writer.writerows(Info[i].EdgeData) No longer needed as it is incorporated into our EpMotion Templates, but its good to keep for testing and possible future use
                 writer.writerows(Optimized_Commands)
             csvFile.close()
-    elif (Purpose == "DILUTION"):
+    elif (Purpose == "FACTOR"):
         Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
-        Names = [Folder_Name / "EpMotion/Factor_Prep_SR_Base.csv", Folder_Name / "EpMotion/Factor_Prep_SR_P10.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Final.csv"]
+        Names = [Folder_Name / "EpMotion/Factor_Prep_SR_Base.csv", Folder_Name / "EpMotion/Factor_Prep_SR_P10.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Final.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Mixing.csv" ]
         for i,Name in enumerate(Names):
+            if not Optimized_Commands[i]:
+                continue
             with open(Name , "w") as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerows(Header_Data)
@@ -63,8 +65,10 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
             csvFile.close()
     else:
         Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
-        Names = [Folder_Name / "EpMotion/Dilution_Prep_Base.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_P10.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_Final.csv"]
+        Names = [Folder_Name / "EpMotion/Dilution_Prep_Base.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_P10.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_Mixing.csv"]
         for i,Name in enumerate(Names):
+            if not Optimized_Commands[i]:
+                continue
             with open(Name , "w") as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerows(Header_Data)
@@ -79,26 +83,31 @@ def Script_Optimizer(Info, Purpose):
         Plate_Commands = Data.sort_values(["S_Rack", "Source"])
         return Plate_Commands.values.tolist()
     else:
-        Base_Values = ((Data.sort_values("Volume", ascending = False)
+        Base_Values = ((Data.sort_values(by = "Volume", ascending = False)
                     .drop_duplicates(subset = ['D_Rack', "Destination"]))
-                    .sort_values(["Tool","S_Rack", "Source"])
+                    .sort_values(by = ["Tool","S_Rack", "Source"])
                     .reset_index(drop = True))
 
         Tools_Used = Base_Values["Tool"].unique()
 
         Factor_Top_Up_Values = (Data.append(Base_Values)
-                                .drop_duplicates(keep = False)
-                                .sort_values(["Tool", "S_Rack", "Source"])
-                                .reset_index(drop = True))
+                    .drop_duplicates(keep = False)
+                    .sort_values(by = ["Tool", "S_Rack", "Source"])
+                    .reset_index(drop = True))
+
+        if Purpose == "CEREAL" :
+            Mixing_Commands = Base_Values.copy()
+            Mixing_Commands.Volume = Mixing_Commands.Volume/4
+            Base_Values.Volume = Base_Values.Volume*3/4
+        else:
+            Mixing_Commands = []
+
         P_10_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] == "TS_10"]
         Large_P_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] != "TS_10"]
 
-        if not Large_P_Commands.values.tolist():
-            
-
         Tools_Used = np.append(Tools_Used, (Factor_Top_Up_Values["Tool"].unique()))
 
-        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist()], np.unique(Tools_Used).tolist()
+        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist(), Mixing_Commands.values.tolist()], np.unique(Tools_Used).tolist()
 
 #Outputs a written protocol for original rack placement
 def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, Media_Vol_Needed):
@@ -122,7 +131,7 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
         Media_Volume = Needed_Vol[i][1]
         if Needed_Vol[i][0] < 1:
             Media_Volume = 1/(Needed_Vol[i][0]/Needed_Vol[i][1])
-            Initial_Amount =  1
+            Initial_Vol =  1
             if Media_Volume > 1600:
                 Initial_Vol = Needed_Vol[i][0]*1600
                 File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, 1599))
