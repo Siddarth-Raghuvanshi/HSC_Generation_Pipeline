@@ -53,7 +53,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
                 writer.writerows(Optimized_Commands)
             csvFile.close()
     elif (Purpose == "FACTOR"):
-        Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
+        Optimized_Commands, Tools, Mixing_Info = Script_Optimizer(Info, Purpose)
         Names = [Folder_Name / "EpMotion/Factor_Prep_SR_Base.csv", Folder_Name / "EpMotion/Factor_Prep_SR_P10.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Final.csv", Folder_Name / "EpMotion/Factor_Prep_SR_Mixing.csv" ]
         for i,Name in enumerate(Names):
             if not Optimized_Commands[i]:
@@ -63,8 +63,9 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
                 writer.writerows(Header_Data)
                 writer.writerows(Optimized_Commands[i])
             csvFile.close()
+        return Mixing_Info
     else:
-        Optimized_Commands, Tools = Script_Optimizer(Info, Purpose)
+        Optimized_Commands, Tools, _  = Script_Optimizer(Info, Purpose)
         Names = [Folder_Name / "EpMotion/Dilution_Prep_Base.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_P10.csv", Folder_Name / "EpMotion/Dilution_Prep_SR_Mixing.csv"]
         for i,Name in enumerate(Names):
             if not Optimized_Commands[i]:
@@ -95,19 +96,22 @@ def Script_Optimizer(Info, Purpose):
                     .sort_values(by = ["Tool", "S_Rack", "Source"])
                     .reset_index(drop = True))
 
-        if Purpose == "CEREAL" :
+        if not Purpose == "CEREAL" :
             Mixing_Commands = Base_Values.copy()
             Mixing_Commands.Volume = Mixing_Commands.Volume/4
+            #Also change the values of the tool if there is a volume change
             Base_Values.Volume = Base_Values.Volume*3/4
+            Mixing_Info = [Mixing_Commands.Volume.min(), Base_Values.Volume.max()/Mixing_Commands.Volume.min()]
         else:
-            Mixing_Commands = []
+            Mixing_Commands = pd.DataFrame()
+            Mixing_Info = []
 
         P_10_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] == "TS_10"]
         Large_P_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] != "TS_10"]
 
         Tools_Used = np.append(Tools_Used, (Factor_Top_Up_Values["Tool"].unique()))
 
-        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist(), Mixing_Commands.values.tolist()], np.unique(Tools_Used).tolist()
+        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist(), Mixing_Commands.values.tolist()], np.unique(Tools_Used).tolist(), Mixing_Info
 
 #Outputs a written protocol for original rack placement
 def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, Media_Vol_Needed):
