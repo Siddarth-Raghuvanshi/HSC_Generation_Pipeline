@@ -47,7 +47,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
             Optimized_Commands = Script_Optimizer(Info[i].Commands, Purpose)
             name = Folder_Name / ("EpMotion/Epmotion_Plate_"+ str(i+1) + "_SR.csv")
             with open(name, "w") as csvFile:
-                writer = csv.writer(csvFile)
+                writer = csv.writer(csvFile, lineterminator = "\n")
                 writer.writerows(Header_Data)
                 #writer.writerows(Info[i].EdgeData) No longer needed as it is incorporated into our EpMotion Templates, but its good to keep for testing and possible future use
                 writer.writerows(Optimized_Commands)
@@ -59,7 +59,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
             if not Optimized_Commands[i]:
                 continue
             with open(Name , "w") as csvFile:
-                writer = csv.writer(csvFile)
+                writer = csv.writer(csvFile, lineterminator = "\n")
                 writer.writerows(Header_Data)
                 writer.writerows(Optimized_Commands[i])
             csvFile.close()
@@ -71,7 +71,7 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
             if not Optimized_Commands[i]:
                 continue
             with open(Name , "w") as csvFile:
-                writer = csv.writer(csvFile)
+                writer = csv.writer(csvFile, lineterminator = "\n")
                 writer.writerows(Header_Data)
                 writer.writerows(Optimized_Commands[i])
             csvFile.close()
