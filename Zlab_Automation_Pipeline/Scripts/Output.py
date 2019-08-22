@@ -118,7 +118,7 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
     name = Folder_Name / "Protocol_SR.txt"
     File =  open(name,"w")
 
-    File.write("Epmotion Protocol\n\n")
+    File.write("Epmotion Protocol" + str(datetime.now().hour) + "_" + str(datetime.now().minute) + "_" + str(datetime.now().second) ""\n\n")
     File.write("DILUTION RACK PLACEMENT \n\n")
     File.write("1. Place a 7 slot reservoir rack into the EpMotion in C2\n")
     if Rack_Layout.all():
