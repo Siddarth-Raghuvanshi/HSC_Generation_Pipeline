@@ -10,6 +10,8 @@ import pandas as pd
 from pathlib import Path
 
 Epitube_Vol = 1600 # I know that global variables are considered to be terrible, but frankly this is a much more elegant solution than anything else I've had.
+Min_Dilution_Vol = 0.5 # Minimum Volume of dilution before it resorts to cereal dilutions
+
 
 #Takes the information from the JMP file and places everything into a format readable by Epmotion
 def Rearrangment(Commands, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol, Added_Cell_Vol):
@@ -55,6 +57,12 @@ def Rearrangment(Commands, Layout, PlateType, Well_Vol,Edge_Well, Dead_Vol, Adde
         while (Screwup):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
             FileName, Screwup = Get_Concentrations(Levels, Factors,True,name)
+
+    Dilution_Conc_Frame = Man_Dilution_Calc(Summary*Factor_Vol, Dead_Vol, FileName)
+
+    Cereal_Dilution_Commands = ()
+
+
 
     Dilution_Locations, Dilution_Commands, Needed_Vol, Media_Vol_Needed, Cereal_Commands, Source_Location = Dilute(Layout, Source, Levels, Factors, Summary, Dead_Vol, FileName)
 
@@ -102,16 +110,10 @@ def Get_Concentrations(Levels, Factors,Screwup = False, name = ""):
     return name, Screwup
 
 #Creates a CSV for the epmotion which allows it to dilute the manual concentration to the JMP dilutions.
-def Dilute(Layout, Source, Levels, Factors, Summary, Dead_Vol, FileName):
-
-    Min_Dilution_Vol = 0.5 # Minimum Volume of dilution before it resorts to cereal dilutions
-    Dilutions = []
-    Commands = []
-    Source_Location = []
-    Cereal_Commands = []
-    cereal_Dilutions = 0
-    Needed_Vol = []
-
+def Man_Dilution_Calc(Factor_Volume_Frame, Dead_Vol, FileName):
+    #Get some variables
+    Levels = Factor_Volume_Frame.columns
+    Factors = Factor_Volume_Frame.index
     #Find the dilution which should be done manually so as to not waste any factor
     Dilution_Conc = pd.read_csv(Path.cwd() / FileName, index_col = 0)
 
@@ -122,9 +124,9 @@ def Dilute(Layout, Source, Levels, Factors, Summary, Dead_Vol, FileName):
 
     #mass/moles of Factors used  Sum(Vi*Ci = mass/mols)
     Volume_Times_Conc = pd.DataFrame(Dilution_Conc.drop(["Source"], axis =1)
-                                    .values*(Summary*Factor_Vol+Dead_Vol),
-                                    columns = Summary.columns,
-                                    index = Summary.index)
+                                    .values*(Factor_Volume_Frame+Dead_Vol),
+                                    columns = Factor_Volume_Frame.columns,
+                                    index = Factor_Volume_Frame.index)
 
     #Volumes of Manual Concentration which should be made
     Manual_Volumes = Volume_Times_Conc.sum(axis = 1)/(Dilution_Conc.iloc[:,len(Levels)]*1.1)
@@ -140,78 +142,104 @@ def Dilute(Layout, Source, Levels, Factors, Summary, Dead_Vol, FileName):
     Dilution_Conc["Manually Diluted Concentration"] = Manual_Concentrations.tolist()
     Dilution_Conc.to_csv(Path.cwd() / FileName)
 
+    return Dilution_Conc
+
+def Cereal_Dilution_Commands(Layout):
+
+    Dilutions = []
+    Commands = []
+    Source_Location = []
+    Cereal_Commands = []
+    cereal_Dilutions = 0
+    Needed_Vol = []
+    #Need to create Factors, a class which contains this information, otherwise this is too much
+
     Dilution_Liquid_Needed = 0
 
-    with open(Path.cwd() / name) as Dilution_Concentrations:
-        csv_reader = csv.reader(Dilution_Concentrations, delimiter=',')
-        line_count = 0
-        for row in csv_reader:
-            if line_count == 0:
-                line_count += 1
-            else:
-                for i in range(len(Levels)):
-                    Index = (line_count-1)*len(Levels)+i+cereal_Dilutions
-                    Rack = 1
-                    if (Index < 24):
-                        Well_Location = Layout[(line_count-1)*len(Levels)+i+cereal_Dilutions]
-                        Destination = 2
-                        Source_Location.append(3)
-                    else:
-                        Well_Location = Layout[((line_count-1)*len(Levels)+i+cereal_Dilutions) - 24 + len(Factors)]
-                        Destination = 1
-                        Source_Location.append(1)
-                    Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
-                    Volume_to_add = (float(row[i+2])*len(Factors))/Manual_Concentrations[line_count-1]*Diluted_Factor_Needed
-                    cereal_Run = False
-                    if (Volume_to_add < Min_Dilution):
-                        Diluted_Factor_Needed = 0.5 * Diluted_Factor_Needed/Volume_to_add
-                        Volume_to_add = 0.5
-                    if (Diluted_Factor_Needed > Epitube_Vol):
-                        Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
-                        cereal_Run = True
-                        cereal_Dilutions +=1
-                    #How much liquid needs to be added to top up to the correct concentration
-                    Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
-                    Dilution_Liquid_Needed += Top_up_Volume
-                    if not cereal_Run:
-                        Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
-                    else:
-                        Cereal_Commands.extend(Fill_Up( Source[line_count-1][1], Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
+    #Modify the Layout list to properly represent where the space in the EpMotion
+    Spaces = np.append(Layout, Layout[len(Factors):]) #Assumes just a single Factor rack and one source rack
 
-                    while(cereal_Run):
-                        Index = (line_count-1)*len(Levels)+i+cereal_Dilutions
-                        cereal_Run = False
-                        Cereal_Location = Well_Location
-                        Rack = 3
-                        if Index > 24:
-                            Rack = 1
-                        if (Index < 24):
-                            Well_Location = Layout[Index]
-                            Destination = 2
-                            Source_Location[(line_count-1)*len(Levels)+i] = 3
-                        else:
-                            Well_Location = Layout[Index - 24 + len(Factors)]
-                            Destination = 1
-                            Source_Location[(line_count-1)*len(Levels)+i] = 1
-                        Diluted_Factor_Needed = User_Vol[(line_count-1)*len(Levels)+i]
-                        Volume_to_add = (float(row[i+2])*len(Factors))/(Manual_Concentrations[line_count-1]*Volume_to_add/Epitube_Vol)*Diluted_Factor_Needed
-                        if (Volume_to_add < Min_Dilution):
-                            Volume_to_add = Volume_to_add * Epitube_Vol/User_Vol[(line_count-1)*len(Levels)+i]
-                            Diluted_Factor_Needed = Epitube_Vol + Cell_Volumes[(line_count-1)*len(Levels)+i]
-                        if (Volume_to_add < Min_Dilution):
-                            Volume_to_add = 0.5
-                            cereal_Run = True
-                            cereal_Dilutions +=1
-                        Top_up_Volume = Diluted_Factor_Needed - Volume_to_add - Cell_Volumes[(line_count-1)*len(Levels)+i]
-                        if not cereal_Run:
-                            Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
-                        else:
-                            Cereal_Commands.extend(Fill_Up(Cereal_Location, Top_up_Volume, Volume_to_add, Well_Location, Destination, Rack))
-                    Dilutions.append(Well_Location)
-                line_count += 1
+    Total_Volume = (Summary*Factor_Vol+Dead_Vol)*1.1
+
+    #Multiply all of the Concentrations by the volume including the dead vol and a 10% buffer
+    Vol_Times_Conc = pd.DataFrame(Dilution_Conc.drop(["Source", "Manually Diluted Concentration"], axis =1)
+                                    .values*Total_Volume*len(Factors),
+                                    columns = Summary.columns,
+                                    index = Summary.index)
+
+    #Find the volume to add from the manual source concentrations get the correct concentrations
+    Vol_To_Add = Vol_Times_Conc.div(Dilution_Conc["Manually Diluted Concentration"], axis=0)
+
+    #Scale up the amount of factor and media used to avoid cereal dilutions
+    Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Min_Dilution_Vol]
+    Scaled_Total_Vol = Total_Volume.div(Below_Cutoff_Values)*Min_Dilution_Vol
+    Scaled_Total_Vol = Scaled_Total_Vol[Scaled_Total_Vol < Epitube_Vol]
+    Vol_To_Add = Vol_To_Add.where(Scaled_Total_Vol.isna(), 0.5)
+    Total_Volume = Total_Volume.where(Scaled_Total_Vol.isna(),Scaled_Total_Vol.values)
+
+    #Scale the rest of the concentrations to have a volume of the Epitube
+    Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Min_Dilution_Vol]
+    Scaled_Vol_Add = Below_Cutoff_Values.div(Total_Volume)*Epitube_Vol
+    Vol_To_Add = Vol_To_Add.where(Scaled_Vol_Add.isna(), Scaled_Vol_Add)
+    Total_Volume = Total_Volume.where(Scaled_Vol_Add.isna(),Epitube_Vol)
+
+    #Find the number of cereal dilutions required for each factor and make sure we can fit them on the EpMotion
+    Min_Dilution_Series = pd.Series([Min_Dilution_Vol]*len(Factors), index=Factors)
+    Number_of_Dilutions = pd.Series(np.ceil(
+                                    np.log(Min_Dilution_Series.div(Vol_To_Add.min(axis=1)))/
+                                    np.log(Epitube_Vol/Min_Dilution_Vol)))
+    if len(Spaces) < Number_of_Dilutions.sum() + len(Factors)*len(Levels) + len(Factors):
+        messagebox.showinfo("Error", "There are too many tubes and too little space in the EpMotion required for cereally diluting the samples")
+        quit()
+
+    #Create Dataframes which contains the concentrations and locations of each factor
+    Rack_Locations = pd.DataFrame(Spaces[:len(Levels)],
+                             index=Summary.index,
+                             columns = ["Manual Dilution"])
+    Spaces = Spaces[len(Levels):]
+    Rack_Conc = pd.DataFrame({"Manual Dilution": Dilution_Conc["Manually Diluted Concentration"]})
+    Rack_Conc = pd.concat([Rack_Conc,
+                           pd.DataFrame(columns =
+                                        range(1,int(Number_of_Dilutions.max())+1))])
+    Rack_Locations = pd.concat([Rack_Locations,
+                                pd.DataFrame(columns =
+                                             range(1,int(Number_of_Dilutions.max())+1))])
+
+    #Add the Dilutions to the above Dataframes and fill out cereal commands
+    Source_Rack = 1 #An assumption being made is that the source always has to be on the first rack
+    for j,Factor in enumerate(Number_of_Dilutions.index):
+        Source = Rack_Locations.loc[Factor]["Manual Dilution"]
+        for Number in range(int(Number_of_Dilutions.loc[Factor])): #Different Top Up Volume for last dilution
+            if np.count_nonzero(Spaces == 24) == 2:
+                Destination_Rack = 1
+            else:
+                Destination_Rack = 2
+            Well_Location = Spaces[0]
+            Spaces = Spaces[1:]
+            Cereal_Commands.extend(Fill_Up(Source_Rack,
+                                           Source,
+                                           Epitube_Vol,
+                                           Min_Dilution_Vol,
+                                           Destination_Rack,
+                                           Well_Location))
+            Source = Well_Location
+            Rack_Locations.at[Factor,Number+1] = Well_Location
+            Rack_Conc.at[Factor,Number+1] = Rack_Conc.iloc[j,Number]*(Min_Dilution_Vol/Epitube_Vol)
+
+def Factor_Dilution_Commands():
+    #Find the volume needed from the cereal dilutions
+    Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Min_Dilution_Vol] #Need to recalculate after the scale-up
+    Min_Dilution_Frame = pd.concat([Min_Dilution_Series]*len(Levels),  axis = 1)
+    Min_Dilution_Frame.columns = Levels
+    Dilution_Tubes = pd.DataFrame(np.ceil( #Find which tube needs to be used
+                                  np.log(Min_Dilution_Frame.div(Below_Cutoff_Values))/
+                                  np.log(Epitube_Vol/Min_Dilution_Vol)))
+    Dilution_Frame = Min_Dilution_Frame*(Epitube_Vol/(Min_Dilution_Vol*Min_Dilution_Vol))
+    Diluted_Vol_To_Add =  Below_Cutoff_Values*(Dilution_Frame.pow(Dilution_Tubes))
 
     return Dilutions, Commands, Needed_Vol, ceil(Dilution_Liquid_Needed/1000)*1100, Cereal_Commands, Source_Location
 
+#Function to take information and fill
 def Fill_Up(Source_Rack, Source, Top_up_Volume, Volume_to_add, Destination_Rack, Well_Location):
     Commands = []
     if (Top_up_Volume%10 >= 0.5) and (Top_up_Volume < 10):

@@ -17,6 +17,8 @@ def JMP_Input(Input_File):
 
 if __name__ == '__main__':
 
+    CREATE AN EPMOTION CLASS WITH THE INFORMATION THE USER ENTERS
+
     #Layout of 24 well racks in the EpMotion
     Rack_Layout = numpy.arange(1,25,1)
 
