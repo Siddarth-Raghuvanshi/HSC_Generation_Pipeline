@@ -17,12 +17,15 @@ def JMP_Input(Input_File):
 
 if __name__ == '__main__':
 
-    CREATE AN EPMOTION CLASS WITH THE INFORMATION THE USER ENTERS
-
     #Layout of 24 well racks in the EpMotion
     Rack_Layout = numpy.arange(1,25,1)
 
     Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = Get_Data()
+
+    #Create a new EpMotion to store information from the user and preset values
+    Handler_Bing = EpMotion()
+    Handler_Bing.Set_UserSpecs(Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol, Rack_Layout)
+
     #Check if the experiment is blocked, and if so divide them into blocks
     Temp_Files =  [Input]
     num_Blocks = 0
@@ -32,17 +35,14 @@ if __name__ == '__main__':
         Blocks = Experiment.groupby("Block")
         num_Blocks = len(Experiment.groupby("Block"))
         for Block_num, Block in Blocks:
-            Block.drop("Block", axis = 1).to_excel("Temp_File" + Block_num + ".xlsx")
-            Temp_Files.append("Temp_File" + Block_num + ".xlsx")
+            Temp_Files.append(Block.drop("Block", axis = 1))
 
     Folders = Produce_Output_Folder(num_Blocks + 1)
 
     for i, Folder in enumerate(Folders[1:]):
-        JMP_Sheet = JMP_Input(Temp_Files[i])
-        Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands  = Rearrangment(JMP_Sheet, Rack_Layout,Plate, Well_Volume, Edge_Num, Dead_Vol,Added_Cell_Vol)
+        DOE_Table = Temp_Files[i]
+        Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands  = Rearrangment(DOE_Table, Handler_Bing)
 
-        if Rack == 96:
-            Rack_Layout = False #False because the rack layout is no longer needed, perhaps change it to actual 96 well layout in future
         if len(Cereal_Commands) != 0: #Only run cereal commands if there are some
             Epmotion_Output(Cereal_Commands,"CEREAL", Folder)
         Mixing_Info = Epmotion_Output(Dil_Commands, "FACTOR", Folder)
@@ -50,17 +50,30 @@ if __name__ == '__main__':
         Epmotion_Output(Output_Plates,"PLATE", Folder)
         Protcol_Output(Dil_Num, Sources, Rack_Layout, Folder, Needed_Vol, Media_Vol_Needed)
     IDs = ["Name1", "Name2", "NameN"]
-    Experiment_Summary(Folders[0], JMP_Sheet, IDs)
+    Experiment_Summary(Folders[0], Experiment, IDs)
     os.rename(Path.cwd() / "Dilution_Concentrations_SR.csv", Folders[0] / "Dilution_Concentrations_SR.csv")
 
 #EpMotion Class with information about the system
 class EpMotion():
 
-    def __init__(self,Well_Vol, Dead_Volume, Cells_Volume, Edge_Num, Layout):
-        self.Well_Vol = Well_Vol
-        self.Dead_Vol = Dead_Volume
-        self.Cell_Volume, Edge_Num
-        self.Space = Layout
+    def __init__(self):
+        self.Min_Dilution_Vol = 0.5
+        self.Epitube_Vol = 1600
 
-    def Assign_Space(Number):
-        S
+    def Set_UserSpecs(self,Plate, Well_Volume, Edge_Num, Dead_Volume, Volume_of_Cells, Rack_Layout):
+        self.Well_Vol = Well_Volume
+        self.Dead_Vol = Dead_Vol
+        self.Cell_Volume = Volume_of_Cells
+        self.EdgeNum =  Edge_Num
+        self.Rack_Layout = Rack_Layout
+        self.Plate = Plate
+
+     #Assumes just a single Factor rack and one source rack in the Epmotion
+    def Factor_Space_Used(self, Num_Factors):
+        self.Space = np.append(Layout, Layout[Num_Factors:])
+
+    def Assign_Space(self, Number):
+        Output = self.Space[:Number]
+        self.Space = self.Space[Number:]
+        return Output
+    def 

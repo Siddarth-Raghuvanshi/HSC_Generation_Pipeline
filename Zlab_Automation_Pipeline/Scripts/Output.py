@@ -23,17 +23,8 @@ def Produce_Output_Folder(Blocks):
 
     return Block_Names
 
-def Experiment_Summary(Folder_Name, JMP_Sheet,IDs):
-    Summary_Template = xlrd.open_workbook(Path.cwd() / "Templates/Automation Summary Template.xlsx")
-    Summary_File = copy(Summary_Template)
-    Output_Sheet = Summary_File.add_sheet("Well Map")
-    Output_Sheet.write(0,0, "Run Name")
-    for i,name in enumerate(IDs):
-        Output_Sheet.write(i+1,0, name)
-    for i in range(JMP_Sheet.ncols):
-        for j, Cell in enumerate(JMP_Sheet.col_values(i)):
-            Output_Sheet.write(j, i + 2, Cell)
-    Summary_File.save(Folder_Name / "Summary.xls")
+def Experiment_Summary(Folder_Name, Experiment,IDs):
+    Experiment.to_excel(Folder_Name / "Summary.xls")
 
 #Outputs a CSV that is usable by Epmotion
 def Epmotion_Output(Info,Purpose, Folder_Name):
