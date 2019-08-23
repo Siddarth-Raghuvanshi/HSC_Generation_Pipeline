@@ -52,3 +52,15 @@ if __name__ == '__main__':
     IDs = ["Name1", "Name2", "NameN"]
     Experiment_Summary(Folders[0], JMP_Sheet, IDs)
     os.rename(Path.cwd() / "Dilution_Concentrations_SR.csv", Folders[0] / "Dilution_Concentrations_SR.csv")
+
+#EpMotion Class with information about the system
+class EpMotion():
+
+    def __init__(self,Well_Vol, Dead_Volume, Cells_Volume, Edge_Num, Layout):
+        self.Well_Vol = Well_Vol
+        self.Dead_Vol = Dead_Volume
+        self.Cell_Volume, Edge_Num
+        self.Space = Layout
+
+    def Assign_Space(Number):
+        S
