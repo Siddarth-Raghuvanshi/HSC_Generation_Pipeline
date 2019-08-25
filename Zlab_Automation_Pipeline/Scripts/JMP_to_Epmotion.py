@@ -60,7 +60,8 @@ class EpMotion():
         self.Min_Dilution_Vol = 0.5
         self.Epitube_Vol = 1600
         self.media_used = 0
-        self.Rack_Locations = None
+        self.Source_Locations = None
+        self.Factor_Locations = None
 
     def Set_UserSpecs(self,Plate, Well_Volume, Edge_Num, Dead_Volume, Volume_of_Cells, Rack_Layout):
         self.Well_Vol = Well_Volume
@@ -79,5 +80,5 @@ class EpMotion():
         self.Space = self.Space[Number:]
         return Output
 
-    def media_used(Volume):
+    def Media_Used(Volume):
         self.media_used += Volume

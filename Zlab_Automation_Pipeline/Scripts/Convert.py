@@ -42,40 +42,52 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
         quit()
 
     #Get a file containing the dilution concentrations and make it run until the user fixes it
-    FileName, Screwup = Get_Concentrations(Levels, Factors)
+    FileName, Screwup = Get_Concentrations(Factor_Volume_Frame)
     if (Screwup):
         while (Screwup):
             messagebox.showerror("Error", "A factor source value is lower than it's level dilution value. Please fill it again")
-            FileName, Screwup = Get_Concentrations(Levels, Factors,True,name)
+            FileName, Screwup = Get_Concentrations(Factor_Volume_Frame, True,name)
 
+    #Calculations for diluting manually diluting the factor and  the factors so to each level
     Dilution_Conc_Frame = Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName)
     Dilution_Information, Cereal_Dilution_Commands = Dilution_Prep(Dilution_Conc_Frame, Factor_Volume_Frame, Handler_Bing)
     Dilution_Information.append(Cell_Vol_Frame)
     Factor_Commands = Factor_Dilution_Commands(Dilution_Information, Handler_Bing)
 
-    Plate_wells = len(Plate(PlateType,Edge_Well).Wells)
-    num_plates = ceil((JMP_Sheet.nrows - 1)/Plate_wells)
+    #Create Commands for Factorial design.
+    Plate_wells = len(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum).Wells)
+    Num_Plates = len(X_Vars.index)
     Plates = []
-    Trials = 1
-    for i in range(num_plates):
-        Plates.append(Plate(PlateType,Edge_Well))
+    Experiments = 1
+    for index,Experiment in X_Vars.iterrows()
+        Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
+        while Plate_Wells%(index+1) not 0:
+            for Factor in Experiment:
+
+
+
+        Plates[index] =
+    for Plate_Num in range(Num_Plates):
+        Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
         for j in range(Plate_wells):
-            if(Trials+j > num_Runs):
+            if(Trials+j > len(X_Vars.index)):
                 break
             Row = JMP_Sheet.row_values(Trials+j)
             for k in range (1,len(Row) - num_Y_Vars):
-                Feed_Location =  Dilution_Locations[num_Levels*(k-1)+Levels.index(Row[k])] # a bit much should simplfy.
-                Source_Rack = Source_Location[num_Levels*(k-1)+Levels.index(Row[k])]
+                Source =
+                Source_Rack =
                 Well_Location = Plates[i].Wells[j]
-                Plates[i].Experiment_Matrix.append([Source_Rack,Feed_Location,2,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])
-        Trials += j
+                Plates[i].Experiment_Matrix.append([Source_Rack,Source,2,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])
+        Experiments += j
 
-    return Plates,len(Dilution_Locations), Dilution_Commands, Source, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands
+    return Plates, Needed_Vol, Factor_Commands, Cereal_Commands
 
 #Create a CSV which contains the user specified dilutions, and asks the user to input these concentrations
-def Get_Concentrations(Levels, Factors,Screwup = False, name = ""):
+def Get_Concentrations(Factor_Volume_Frame,Screwup = False, name = ""):
 
     if not Screwup:
+        Factors = Factor_Volume_Frame.index
+        Levels = Factor_Volume_Frame.columns
 
         Header = [["Factors", "Source"] + Levels ]
         name = "Dilution_Concentrations_SR.csv"
@@ -180,17 +192,17 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
         quit()
 
     #Create Dataframes which contains the concentrations and locations of each factor
-    Handler_Bing.Rack_Locations = pd.DataFrame(Handler_Bing.Assign_Space(len(Levels)),
+    Handler_Bing.Source_Locations = pd.DataFrame(Handler_Bing.Assign_Space(len(Levels)),
                              index=Summary.index,
                              columns = ["Manual Dilution"])
-    Handler_Bing.Rack_Locations = pd.concat([Handler_Bing.Rack_Locations,
+    Handler_Bing.Source_Locations = pd.concat([Handler_Bing.Source_Locations,
                                 pd.DataFrame(columns =
                                              range(1,int(Number_of_Dilutions.max())+1))])
 
     #Add the Dilutions to the above Dataframes and fill out cereal Experiment_Matrix
     Source_Rack = 1 #An assumption being made is that the source always has to be on the first rack
     for j,Factor in enumerate(Number_of_Dilutions.index):
-        Source = Handler_Bing.Rack_Locations.loc[Factor]["Manual Dilution"]
+        Source = Handler_Bing.Source_Locations.loc[Factor]["Manual Dilution"]
         for Number in range(int(Number_of_Dilutions.loc[Factor])): #Different Top Up Volume for last dilution
             if np.count_nonzero(Handler_Bing.Spaces == 24) == 2:
                 Destination_Rack = 1
@@ -203,8 +215,9 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
                                            Handler_Bing.Min_Dilution_Vol,
                                            Destination_Rack,
                                            Well_Location))
+            Handler_Bing.Media_Used(Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol)
             Source = Well_Location
-            Handler_Bing.Rack_Locations.at[Factor,Number+1] = Well_Location
+            Handler_Bing.Source_Locations.at[Factor,Number+1] = Well_Location
             Rack_Conc.at[Factor,Number+1] = Rack_Conc.iloc[j,Number]*(Handler_Bing.Min_Dilution_Vol/Handler_Bing.Epitube_Vol)
 
     Dilution_Information = [Vol_To_Add, Total_Volume]
@@ -223,6 +236,9 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
     Factors = Vol_To_Add.index
     Levels = Vol_To_Add.columns
     Factor_Commands = []
+
+    #Create a dataframe containing the locations of every factor at each level
+    Handler_Bing.Factor_Locations = pd.DataFrame(index = Factors, columns = Levels)
 
     #Find the volume needed from the cereal dilutions
     Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Handler_Bing.Min_Dilution_Vol] #Need to recalculate after the scale-up
@@ -249,16 +265,16 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
                 Destination_Rack = 1
             else:
                 Destination_Rack = 2
-            Source = Handler_Bing.Rack_Locations.iloc[i, int(Dilution_Tubes.loc[Factor,Level])]
+            Source = Handler_Bing.Source_Locations.iloc[i, int(Dilution_Tubes.loc[Factor,Level])]
             Destination = Handler_Bing.Assign_Space(1)
-            Factor_Vol = Vol_To_Add.loc[Factor,Level]
-            Top_up_Vol = Total_Volume.loc[Factor,Level] -
+            Top_up_Vol = Total_Volume.loc[Factor,Level]-Vol_To_Add.loc[Factor,Level]-Cell_Vol_Frame.loc[Factor,Level]
             Factor_Commands.extend(Fill_Up(Source_Rack,
                                            Source,
-                                           Total_Volume.loc[Factor,Level]-Vol_To_Add.loc[Factor,Level]-Cell_Vol_Frame.loc[Factor,Level],
+                                           Top_up_Vol,
                                            Vol_To_Add.loc[Factor,Level],
                                            Destination_Rack,
                                            Destination))
+            Handler_Bing.Media_Used(Top_up_Vol)
 
     return Factor_Commands
 
@@ -309,7 +325,7 @@ class Plate():
             self.Tool = 'TS_1000'
 
         self.num_Edgewells = Edge
-        self.Experiment_Matrix = []
+        self.Commands = []
 
         #Adds Liquid to account for Edge Effects
         self.EdgeData = []
