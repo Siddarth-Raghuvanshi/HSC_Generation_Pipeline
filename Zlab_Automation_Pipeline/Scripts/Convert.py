@@ -59,26 +59,15 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
     Num_Plates = len(X_Vars.index)
     Plates = []
     Experiments = 1
-    for index,Experiment in X_Vars.iterrows()
-        Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
-        while Plate_Wells%(index+1) not 0:
-            for Factor in Experiment:
-
-
-
-        Plates[index] =
-    for Plate_Num in range(Num_Plates):
-        Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
-        for j in range(Plate_wells):
-            if(Trials+j > len(X_Vars.index)):
-                break
-            Row = JMP_Sheet.row_values(Trials+j)
-            for k in range (1,len(Row) - num_Y_Vars):
-                Source =
-                Source_Rack =
-                Well_Location = Plates[i].Wells[j]
-                Plates[i].Experiment_Matrix.append([Source_Rack,Source,2,Well_Location,Factor_Vol-Cell_Vol, "TS_50"])
-        Experiments += j
+    for row_index in range(len(X_Vars.index)):
+        if row_index % Plate_wells == 0:
+            Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
+        for column_index in range(len(X_Vars.columns)):
+            Factor = X_Vars.columns[column_index]
+            Level = X_Vars.iloc(row_index, column_index)
+            Source, Source_Rack = Handler_Bing.Factor_Locations.loc[Factor,Level]
+            Well_Location = Plates[-1].Wells[j]
+            Plates[-1].Commands.append(Source_Rack, Source, 2, Well_Location, Factor_Vol-Cell_Vol, "TS_50")
 
     return Plates, Needed_Vol, Factor_Commands, Cereal_Commands
 
@@ -275,6 +264,7 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
                                            Destination_Rack,
                                            Destination))
             Handler_Bing.Media_Used(Top_up_Vol)
+            Handler_Bing.Factor_Locations.at[Factor,Level] = [Destination, Destination_Rack]
 
     return Factor_Commands
 
