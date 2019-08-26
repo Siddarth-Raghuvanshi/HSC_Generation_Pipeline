@@ -176,7 +176,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
     Number_of_Dilutions = pd.Series(np.ceil(
                                     np.log(Min_Dilution_Series.div(Vol_To_Add.min(axis=1)))/
                                     np.log(Handler_Bing.Epitube_Vol/Handler_Bing.Min_Dilution_Vol)))
-    if len(Handler_Bing.Spaces) < Number_of_Dilutions.sum() + len(Factors)*len(Levels) + len(Factors):
+    if len(Handler_Bing.SpaceLeft) < Number_of_Dilutions.sum() + len(Factors)*len(Levels) + len(Factors):
         messagebox.showinfo("Error", "There are too many tubes and too little space in the EpMotion required for cereally diluting the samples")
         quit()
 
@@ -193,7 +193,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
     for j,Factor in enumerate(Number_of_Dilutions.index):
         Source = Handler_Bing.Source_Locations.loc[Factor]["Manual Dilution"]
         for Number in range(int(Number_of_Dilutions.loc[Factor])): #Different Top Up Volume for last dilution
-            if np.count_nonzero(Handler_Bing.Spaces == 24) == 2:
+            if np.count_nonzero(Handler_Bing.SpaceLeft == 24) == 2:
                 Destination_Rack = 1
             else:
                 Destination_Rack = 2
@@ -203,7 +203,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
                                            Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol,
                                            Handler_Bing.Min_Dilution_Vol,
                                            Destination_Rack,
-                                           Well_Location))
+                                           Well_Location).extend(Number))
             Handler_Bing.Media_Used(Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol)
             Source = Well_Location
             Handler_Bing.Source_Locations.at[Factor,Number+1] = Well_Location
@@ -241,7 +241,7 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
     Dilution_Tubes.fillna(0, inplace = True)
 
     #Check to make sure that the factors and dilutions haven't gone into the second rack
-    if np.count_nonzero(Handler_Bing.Spaces == 24) == 2:
+    if np.count_nonzero(Handler_Bing.SpaceLeft == 24) == 2:
                 Source_Rack = 1
     #Should not be an issue, but a check is always good, if this error appears, modify the code to allow Source_Rack to be = 2
     else:
@@ -250,7 +250,7 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
 
     for i,Factor in enumerate(Factors):
         for j,Level in enumerate(Levels):
-            if np.count_nonzero(Handler_Bing.Spaces == 24) == 2:
+            if np.count_nonzero(Handler_Bing.SpaceLeft == 24) == 2:
                 Destination_Rack = 1
             else:
                 Destination_Rack = 2

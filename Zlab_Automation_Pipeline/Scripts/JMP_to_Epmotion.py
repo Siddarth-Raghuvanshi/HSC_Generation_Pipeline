@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     #Layout of 24 well racks in the EpMotion
     Rack_Layout = numpy.arange(1,25,1)
-
+    #Get Data from the GUI
     Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = Get_Data()
 
     #Create a new EpMotion to store information from the user and preset values
@@ -41,14 +41,16 @@ if __name__ == '__main__':
 
     for i, Folder in enumerate(Folders[1:]):
         DOE_Table = Temp_Files[i]
-        Output_Plates, Dil_Num, Dil_Commands, Sources, Needed_Vol, Rack, Media_Vol_Needed, Cereal_Commands  = Rearrangment(DOE_Table, Handler_Bing)
+        Output_Plates, Needed_Vol, Factor_Commands, Cereal_Commands = Rearrangment(DOE_Table, Handler_Bing)
 
         if len(Cereal_Commands) != 0: #Only run cereal commands if there are some
             Epmotion_Output(Cereal_Commands,"CEREAL", Folder)
-        Mixing_Info = Epmotion_Output(Dil_Commands, "FACTOR", Folder)
+
+        Mixing_Info = Epmotion_Output(Factor_Commands, "FACTOR", Folder)
         print(Mixing_Info)
         Epmotion_Output(Output_Plates,"PLATE", Folder)
-        Protcol_Output(Dil_Num, Sources, Rack_Layout, Folder, Needed_Vol, Media_Vol_Needed)
+        Protcol_Output(Folder, Needed_Vol, Handler_Bing)
+
     IDs = ["Name1", "Name2", "NameN"]
     Experiment_Summary(Folders[0], Experiment, IDs)
     os.rename(Path.cwd() / "Dilution_Concentrations_SR.csv", Folders[0] / "Dilution_Concentrations_SR.csv")
@@ -73,11 +75,12 @@ class EpMotion():
 
      #Assumes just a single Factor rack and one source rack in the Epmotion
     def Factor_Space_Used(self, Num_Factors):
-        self.Space = np.append(Layout, Layout[Num_Factors:])
+        self.Space = np.append(Layout, Layout)
+        self.SpaceLeft = np.append(Layout, Layout[Num_Factors:])
 
     def Assign_Space(self, Number):
-        Output = self.Space[:Number]
-        self.Space = self.Space[Number:]
+        Output = self.SpaceLeft[:Number]
+        self.SpaceLeft = self.SpaceLeft[Number:]
         return Output
 
     def Media_Used(Volume):

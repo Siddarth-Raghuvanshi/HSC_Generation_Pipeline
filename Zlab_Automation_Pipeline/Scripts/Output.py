@@ -31,17 +31,15 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
     #Header
     Header_Data = [["Rack","Source","Rack","Destination","Volume","Tool"]]
 
-
     if (Purpose == "PLATE"):
         for i in range(len(Info)):
             #Creates a CSV file and feeds in the new data for Epmotion
-            Optimized_Commands = Script_Optimizer(Info[i].Commands, Purpose)
             name = Folder_Name / ("EpMotion/Epmotion_Plate_"+ str(i+1) + "_SR.csv")
             with open(name, "w") as csvFile:
                 writer = csv.writer(csvFile, lineterminator = "\n")
                 writer.writerows(Header_Data)
                 #writer.writerows(Info[i].EdgeData) No longer needed as it is incorporated into our EpMotion Templates, but its good to keep for testing and possible future use
-                writer.writerows(Optimized_Commands)
+                writer.writerows(Info[i].Commands)
             csvFile.close()
     elif (Purpose == "FACTOR"):
         Optimized_Commands, Tools, Mixing_Info = Script_Optimizer(Info, Purpose)
@@ -69,47 +67,75 @@ def Epmotion_Output(Info,Purpose, Folder_Name):
 
 #Optimizes the layout, so that the EpMotion would use the least amount of times and time
 def Script_Optimizer(Info, Purpose):
-    Data = pd.DataFrame(Info, columns = ["S_Rack","Source","D_Rack","Destination","Volume","Tool"])
+    if Purpose == "FACTOR":
+        Data = pd.DataFrame(Info, columns = ["S_Rack","Source","D_Rack","Destination","Volume","Tool"])
 
-    if(Purpose == "PLATE"):
-        Plate_Commands = Data.sort_values(["S_Rack", "Source"])
-        return Plate_Commands.values.tolist()
-    else:
         Base_Values = ((Data.sort_values(by = "Volume", ascending = False)
                     .drop_duplicates(subset = ['D_Rack', "Destination"]))
                     .sort_values(by = ["Tool","S_Rack", "Source"])
                     .reset_index(drop = True))
 
-        Tools_Used = Base_Values["Tool"].unique()
-
-        Factor_Top_Up_Values = (Data.append(Base_Values)
+        Factor_Top_Up_Commands = (Data.append(Base_Values)
                     .drop_duplicates(keep = False)
                     .sort_values(by = ["Tool", "S_Rack", "Source"])
                     .reset_index(drop = True))
 
-        if not Purpose == "CEREAL" :
-            Mixing_Commands = Base_Values.copy()
-            Mixing_Commands.Volume = Mixing_Commands.Volume/4
-            #Also change the values of the tool if there is a volume change
-            Base_Values.Volume = Base_Values.Volume*3/4
-            Mixing_Info = [Mixing_Commands.Volume.min(), Base_Values.Volume.max()/Mixing_Commands.Volume.min()]
-        else:
-            Mixing_Commands = pd.DataFrame()
-            Mixing_Info = []
+        Mixing_Commands = Base_Values.copy()
+        Mixing_Commands.Volume = Mixing_Commands.Volume/4
+        #Also change the values of the tool if there is a volume change
+        Mixing_Commands.loc[Mixing_Commands.Volume < 40, 'Tool'] = "TS_50"
+        Base_Values.Volume = Base_Values.Volume*3/4
+        Base_Values.loc[Base_Values.Volume < 40, 'Tool'] = "TS_50"
 
-        P_10_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] == "TS_10"]
-        Large_P_Commands = Factor_Top_Up_Values[Factor_Top_Up_Values["Tool"] != "TS_10"]
+        Info = [Base_Values.values.tolist(),Factor_Top_Up_Commands.values.tolist(), Mixing_Commands.values.tolist()]
 
-        Tools_Used = np.append(Tools_Used, (Factor_Top_Up_Values["Tool"].unique()))
+    else:
+        Data = pd.DataFrame(Info, columns = ["S_Rack","Source","D_Rack","Destination","Volume","Tool", "Round"])
 
-        return [Base_Values.values.tolist(), P_10_Commands.values.tolist(), Large_P_Commands.values.tolist(), Mixing_Commands.values.tolist()], np.unique(Tools_Used).tolist(), Mixing_Info
+        Rounds = len(Data.Round.unqiue())
+        Info = []
+
+        for Round_Num in range(Rounds):
+
+            Mixing_Commands = ((Data[Data.Round = Round_Num+1].sort_values(by = "Volume", ascending = False)
+                        .drop_duplicates(subset = ['D_Rack', "Destination"]))
+                        .sort_values(by = ["Tool","S_Rack", "Source"])
+                        .reset_index(drop = True))
+
+            Factor_Top_Up_Commands = (Data[Data.Round = Round_Num+1].append(Mixing_Commands)
+                        .sort_values(by = "Volume", ascending = False)
+                        .drop_duplicates(keep = False)
+                        .sort_values(by = ["Tool", "S_Rack", "Source"])
+                        .reset_index(drop = True))
+
+            Info.append([Factor_Top_Up_Commands.values.tolist(), Mixing_Commands.values.tolist()])
+
+    return Info
 
 #Outputs a written protocol for original rack placement
-def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, Media_Vol_Needed):
+def Protcol_Output(Folder_Name, Needed_Vol, Handler_Bing):
     name = Folder_Name / "Protocol_SR.txt"
     File =  open(name,"w")
 
     File.write("Epmotion Protocol" + str(datetime.now().hour) + "_" + str(datetime.now().minute) + "_" + str(datetime.now().second) + "\n\n")
+
+    File.write("MEDIA AND FACTOR PREPARTION \n\n")
+    for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
+        File.Write("1. Create " + str(Handler_Bing.media_used*1.1/1000) + "mls of media" )
+        Initial_Vol = Needed_Vol[i][0]
+        Media_Volume = Needed_Vol[i][1]
+        if Needed_Vol[i][0] < 1:
+            Media_Volume = 1/(Needed_Vol[i][0]/Needed_Vol[i][1])
+            Initial_Vol =  1
+            if Media_Volume > 1600:
+                Initial_Vol = Needed_Vol[i][0]*1600
+                File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of media\n" % (i + 2, Factor, Initial_Vol, 1599))
+                File.write("%d b). Dilute the created %s dilution by adding %.2f ul into %.2f ul of media\n" % (i + 2, Factor, Initial_Vol, Needed_Vol[i][1] - Initial_Vol))
+                File.write("Test the dilution out real quick, I haven't tested this before")
+                continue
+        File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 2, Factor, Initial_Vol, Media_Volume - Initial_Vol))
+    File.write("\n\n")
+
     File.write("DILUTION RACK PLACEMENT \n\n")
     File.write("1. Place a 7 slot reservoir rack into the EpMotion in C2\n")
     if Rack_Layout.all():
@@ -120,33 +146,13 @@ def Protcol_Output(Dilutions_Num, Source, Rack_Layout, Folder_Name, Needed_Vol, 
     File.write("4. Ensure that there is a space for a plate in the front of the EpMotion in TMX\n")
     File.write("5. Place a TS_10 and a TS_50 into the EpMotion\n\n")
 
-    File.write("MANUAL DILUTIONS \n\n")
-    for i,Factor in enumerate(Source):
-        Initial_Vol = Needed_Vol[i][0]
-        Media_Volume = Needed_Vol[i][1]
-        if Needed_Vol[i][0] < 1:
-            Media_Volume = 1/(Needed_Vol[i][0]/Needed_Vol[i][1])
-            Initial_Vol =  1
-            if Media_Volume > 1600:
-                Initial_Vol = Needed_Vol[i][0]*1600
-                File.write("%d a). Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, 1599))
-                File.write("%d b). Dilute the created %s dilution by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, Needed_Vol[i][1] - Initial_Vol))
-                File.write("Test the dilution out real quick, I haven't tested this before")
-                continue
-        File.write("%d. Dilute Stock %s by adding %.2f ul into %.2f ul of Media\n" % (i + 1, Factor[0], Initial_Vol, Media_Volume - Initial_Vol))
-    File.write("\n\n")
-
     File.write("LIQUID LAYOUT \n\n")
-    File.write("1. Place a 25 ml reservoir containing " + str(Media_Vol_Needed/1000) + " ml of dilution liquid into the 1st slot in the reservoir\n")
+    File.write("1. Place a 25 ml reservoir containing remaining amount of dilution liquid or media into the 1st slot in the reservoir\n")
     File.write("2. Place a 25 ml reservoir containing edge liquid into the 2nd slot in the reservoir\n")
-    for i in range(len(Source)):
-        File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Source[i][0], Source[i][1]))
-    if Rack_Layout.all():
-        File.write("%d. Place 24 sterile Epitubes into the second rack from %s to %s\n" %( i+3, Rack_Layout[0], Rack_Layout[23]))
-        File.write("%d. Place %d sterile Epitubes into the second rack from %s to %s\n\n" %(len(Source) + 4 , Dilutions_Num - 24, Rack_Layout[len(Source)], Rack_Layout[Dilutions_Num-24]))
-    else:
-        File.write("\n")
-
+    for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
+        File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Factor, Handler_Bing.Space[i]))
+    File.write("%d. Place %d sterile Epitubes into the second rack starting from slot 1 and move into the first rack after the factors if needed\n" %(i+4, len(Handler_Bing.Space)-len(Handler_Bing.SpaceLeft)))
+    File.write("\n")
 
     File.write("EPBLUE PROTOCOL \n\n")
     File.write("1. Create a new application.\n")
