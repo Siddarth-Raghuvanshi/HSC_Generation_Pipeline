@@ -21,23 +21,23 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
     Levels = set()
 
     #Set the space used for the factors
-    Handler_Bing.Factor_Space_Used(len(X_Vars.index))
+    Handler_Bing.Factor_Space_Used(len(X_Vars.columns))
 
     #Used to take into account fractional factorial, i.e. uses all of the levels created by all the factors
-    [Levels.update(X_Vars[Factor].unique().tolist()) for Factor in X_Vars.columns]
+    [Levels.update(X_Vars[Factor].unique().tolist()) for Factor in Factors]
     Levels = sorted(Levels)
 
     #Find the volume for each Level which will be tested
     Summary = pd.concat([X_Vars[Factor].value_counts() for Factor in X_Vars.columns], axis =1).T
     Factor_Volume_Frame = Summary*Factor_Vol
-    Cell_volume_Frame = Summary*Cell_Vol
+    Cell_Volume_Frame = Summary*Cell_Vol
 
     #Checks to ensure the Epmotion has space
     if (((Factor_Volume_Frame) > Handler_Bing.Epitube_Vol).any(axis=None)):
         messagebox.showinfo("Error", "The Volume of a single tube at a specific level is too high for the Epitube, please block your experiment. (Modifications can be made to the program to adjust this by splitting the Levels into two tubes if needed)")
         quit()
     #Let the user know the experimient has too much runs and not enough space on the epmotion.
-    if len(Levels)*len(Factors) > 48-Len(Factors):
+    if len(Levels)*len(Factors) > 48-len(Factors):
         messagebox.showinfo("Error", "Your Experiment has a large amount of Factors and Runs, which is beyond the space avalible in the EpMotion. I recommended blocking your experiments to avoid nuisance factors")
         quit()
 
@@ -49,9 +49,9 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
             FileName, Screwup = Get_Concentrations(Factor_Volume_Frame, True,name)
 
     #Calculations for diluting manually diluting the factor and  the factors so to each level
-    Dilution_Conc_Frame = Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName)
+    Dilution_Conc_Frame, Needed_Vol = Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName)
     Dilution_Information, Cereal_Dilution_Commands = Dilution_Prep(Dilution_Conc_Frame, Factor_Volume_Frame, Handler_Bing)
-    Dilution_Information.append(Cell_Vol_Frame)
+    Dilution_Information.append(Cell_Volume_Frame)
     Factor_Commands = Factor_Dilution_Commands(Dilution_Information, Handler_Bing)
 
     #Create Commands for Factorial design.
@@ -60,25 +60,26 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
     Plates = []
     Experiments = 1
     for row_index in range(len(X_Vars.index)):
-        if row_index % Plate_wells == 0:
+        Well = row_index % Plate_wells
+        if Well == 0:
             Plates.append(Plate(Handler_Bing.Plate, Handler_Bing.EdgeNum))
         for column_index in range(len(X_Vars.columns)):
             Factor = X_Vars.columns[column_index]
-            Level = X_Vars.iloc(row_index, column_index)
+            Level = X_Vars.iloc[row_index, column_index]
             Source, Source_Rack = Handler_Bing.Factor_Locations.loc[Factor,Level]
-            Well_Location = Plates[-1].Wells[j]
-            Plates[-1].Commands.append(Source_Rack, Source, 2, Well_Location, Factor_Vol-Cell_Vol, "TS_50")
+            Well_Location = Plates[-1].Wells[Well]
+            Plates[-1].Commands.append([Source_Rack, Source, 2, Well_Location, Factor_Vol-Cell_Vol, "TS_50"])
 
-    return Plates, Needed_Vol, Factor_Commands, Cereal_Commands
+    return Plates, Needed_Vol, Factor_Commands, Cereal_Dilution_Commands
 
 #Create a CSV which contains the user specified dilutions, and asks the user to input these concentrations
 def Get_Concentrations(Factor_Volume_Frame,Screwup = False, name = ""):
 
     if not Screwup:
         Factors = Factor_Volume_Frame.index
-        Levels = Factor_Volume_Frame.columns
+        Levels = Factor_Volume_Frame.columns.tolist()
 
-        Header = [["Factors", "Source"] + Levels ]
+        Header = [["Factors", "Source"] + Levels]
         name = "Dilution_Concentrations_SR.csv"
         with open(Path.cwd() / name, "w") as csvFile:
             writer = csv.writer(csvFile, lineterminator = "\n")
@@ -86,8 +87,7 @@ def Get_Concentrations(Factor_Volume_Frame,Screwup = False, name = ""):
             for Factor in Factors:
                 writer.writerow([Factor])
         csvFile.close()
-        # Don't break up the text, it doesn't seem to display properly.
-        messagebox.showinfo("Dilutions", "A File called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
+        #messagebox.showinfo("Dilutions", "A File called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
 
     input("\nPress Enter to continue once completed...")
 
@@ -144,7 +144,7 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
 
     Factors = Factor_Volume_Frame.index
-    Levels = Factor_Volume_Columns
+    Levels = Factor_Volume_Frame.columns
     Cereal_Commands = []
 
     Total_Volume = (Factor_Volume_Frame+Handler_Bing.Dead_Vol)*1.1
@@ -152,8 +152,8 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
     #Multiply all of the Concentrations by the volume including the dead vol and a 10% buffer
     Vol_Times_Conc = pd.DataFrame(Dilution_Conc.drop(["Source", "Manually Diluted Concentration"], axis =1)
                                     .values*Total_Volume*len(Factors),
-                                    columns = Summary.columns,
-                                    index = Summary.index)
+                                    columns = Levels,
+                                    index = Factors)
 
     #Find the volume to add from the manual source concentrations get the correct concentrations
     Vol_To_Add = Vol_Times_Conc.div(Dilution_Conc["Manually Diluted Concentration"], axis=0)
@@ -182,7 +182,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
 
     #Create Dataframes which contains the concentrations and locations of each factor
     Handler_Bing.Source_Locations = pd.DataFrame(Handler_Bing.Assign_Space(len(Levels)),
-                             index=Summary.index,
+                             index=Factors,
                              columns = ["Manual Dilution"])
     Handler_Bing.Source_Locations = pd.concat([Handler_Bing.Source_Locations,
                                 pd.DataFrame(columns =
@@ -197,17 +197,18 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
                 Destination_Rack = 1
             else:
                 Destination_Rack = 2
-            Well_Location = Handler_Bing.Assign_Space(1)
+            Well_Location = int(Handler_Bing.Assign_Space(1))
+            Top_up_Vol = Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol
             Cereal_Commands.extend(Fill_Up(Source_Rack,
                                            Source,
-                                           Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol,
+                                           Top_up_Vol,
                                            Handler_Bing.Min_Dilution_Vol,
                                            Destination_Rack,
-                                           Well_Location).extend(Number))
-            Handler_Bing.Media_Used(Handler_Bing.Epitube_Vol - Handler_Bing.Min_Dilution_Vol)
+                                           Well_Location,
+                                           Number))
+            Handler_Bing.Media_Used(Top_up_Vol)
             Source = Well_Location
             Handler_Bing.Source_Locations.at[Factor,Number+1] = Well_Location
-            Rack_Conc.at[Factor,Number+1] = Rack_Conc.iloc[j,Number]*(Handler_Bing.Min_Dilution_Vol/Handler_Bing.Epitube_Vol)
 
     Dilution_Information = [Vol_To_Add, Total_Volume]
 
@@ -255,7 +256,7 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
             else:
                 Destination_Rack = 2
             Source = Handler_Bing.Source_Locations.iloc[i, int(Dilution_Tubes.loc[Factor,Level])]
-            Destination = Handler_Bing.Assign_Space(1)
+            Destination = int(Handler_Bing.Assign_Space(1))
             Top_up_Vol = Total_Volume.loc[Factor,Level]-Vol_To_Add.loc[Factor,Level]-Cell_Vol_Frame.loc[Factor,Level]
             Factor_Commands.extend(Fill_Up(Source_Rack,
                                            Source,
@@ -269,31 +270,31 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
     return Factor_Commands
 
 #Function to take information and fill out a list to easily fill out a CSV
-def Fill_Up(Source_Rack, Source, Top_up_Volume, Volume_to_add, Destination_Rack, Well_Location):
+def Fill_Up(Source_Rack, Source, Top_up_Volume, Volume_to_add, Destination_Rack, Well_Location, Round = None):
     Experiment_Matrix = []
     if (Top_up_Volume%10 >= 0.5) and (Top_up_Volume < 10):
-        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%10, "TS_10"])
+        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%10, "TS_10", Round])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%10
     if (Top_up_Volume % 50 >= 0.5) and (Top_up_Volume < 50):
-        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%50, "TS_50"])
+        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%50, "TS_50", Round])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%50
     if (Volume_to_add % 10 >= 0.5) and (Volume_to_add < 10):
-        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%10, "TS_10"])
+        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%10, "TS_10", Round])
         Volume_to_add = Volume_to_add - Volume_to_add%10
     if (Volume_to_add % 50 >= 0.5) and (Volume_to_add < 50):
-        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%50, "TS_50"])
+        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%50, "TS_50", Round])
         Volume_to_add = Volume_to_add - Volume_to_add%50
     if (Volume_to_add % 1000 >= 0.5):
-        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%1000, "TS_1000"])
+        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,Volume_to_add%1000, "TS_1000", Round])
         Volume_to_add =  Volume_to_add - Volume_to_add%1000
     if (Top_up_Volume % 1000 >= 0.5):
-        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%1000, "TS_1000"])
+        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,Top_up_Volume%1000, "TS_1000", Round])
         Top_up_Volume = Top_up_Volume - Top_up_Volume%1000
     while (Volume_to_add >= 1000):
-        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,1000, "TS_1000"])
+        Experiment_Matrix.append([Source_Rack,Source,Destination_Rack,Well_Location,1000, "TS_1000", Round])
         Volume_to_add =  Volume_to_add - 1000
     while(Top_up_Volume >= 1000):
-        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,1000, "TS_1000"])
+        Experiment_Matrix.append([2,1,Destination_Rack,Well_Location,1000, "TS_1000", Round])
         Top_up_Volume = Top_up_Volume - 1000
 
     return Experiment_Matrix
