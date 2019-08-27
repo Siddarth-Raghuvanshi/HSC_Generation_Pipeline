@@ -47,7 +47,7 @@ if __name__ == '__main__':
     Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = Get_Data()
 
     #Used in case Tkinter crashs
-    #Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = ("/Users/Siddarth/Documents/Code/HSC_Generation_Pipeline/Test_Files/RSM1_SRAH-190813-58R_0B_16CP-add_ctrls.xlsx","96 Well",100,2,16,10)
+    #Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = ("/Users/Siddarth/Documents/Code/HSC_Generation_Pipeline/Test_Files/DIlution_Test.xlsx","96 Well",100,2,16,10)
 
     #Create a new EpMotion to store information from the user and preset values
     Handler_Bing = EpMotion()

@@ -157,6 +157,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
 
     #Find the volume to add from the manual source concentrations get the correct concentrations
     Vol_To_Add = Vol_Times_Conc.div(Dilution_Conc["Manually Diluted Concentration"], axis=0)
+    Vol_To_Add = Vol_To_Add.replace(0,np.nan)
 
     #Scale up the amount of factor and media used to avoid cereal dilutions
     Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Handler_Bing.Min_Dilution_Vol]
@@ -181,8 +182,8 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
         quit()
 
     #Create Dataframes which contains the concentrations and locations of each factor
-    Handler_Bing.Source_Locations = pd.DataFrame(Handler_Bing.Assign_Space(len(Levels)),
-                             index=Factors,
+    Handler_Bing.Source_Locations = pd.DataFrame(Handler_Bing.Assign_Space(len(Factors)),
+                             index= Factors,
                              columns = ["Manual Dilution"])
     Handler_Bing.Source_Locations = pd.concat([Handler_Bing.Source_Locations,
                                 pd.DataFrame(columns =
@@ -248,6 +249,9 @@ def Factor_Dilution_Commands(Dilution_Information, Handler_Bing):
     else:
         messagebox.showinfo("Error", "There is not enough space as source tubes would have to be placed in the second rack")
         quit()
+
+    #Replace the Nan values with 0 to allow the program to work
+    Vol_To_Add = Vol_To_Add.replace(np.nan, 0)
 
     for i,Factor in enumerate(Factors):
         for j,Level in enumerate(Levels):
