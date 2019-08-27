@@ -7,7 +7,6 @@ import numpy as np
 import os
 import xlrd
 import xlwt
-from xlutils.copy import copy
 from pathlib import Path
 
 #Produces a collection of output folders and files which are required
@@ -115,10 +114,10 @@ def Protcol_Output(Folder_Name, Needed_Vol, Handler_Bing):
     name = Folder_Name / "Protocol_SR.txt"
     File =  open(name,"w")
 
-    File.write("Epmotion Protocol" + str(datetime.now().hour) + "_" + str(datetime.now().minute) + "_" + str(datetime.now().second) + "\n\n")
+    File.write("Epmotion Protocol " + str(datetime.now().date()) + "\n\n")
 
     File.write("MEDIA AND FACTOR PREPARTION \n\n")
-    File.write("1. Create " + str(Handler_Bing.Media_Needed*1.1/1000) + "mls of media\n" )
+    File.write("1. Create " + str(np.ceil(Handler_Bing.Media_Needed*1.1/1000)) + "mls of media\n" )
     for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
         Initial_Vol = Needed_Vol[i][0]
         Media_Volume = Needed_Vol[i][1]
@@ -145,8 +144,8 @@ def Protcol_Output(Folder_Name, Needed_Vol, Handler_Bing):
     File.write("1. Place a 25 ml reservoir containing remaining amount of dilution liquid or media into the 1st slot in the reservoir\n")
     File.write("2. Place a 25 ml reservoir containing edge liquid into the 2nd slot in the reservoir\n")
     for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
-        File.write("%d. Place the Diluted %s into the %s well in the first rack\n" % ( i+3, Factor, Handler_Bing.Space[i]))
-    File.write("%d. Place %d sterile Epitubes into the first rack starting from slot %d and move into the second rack if needed\n" %(i+4, len(Handler_Bing.Space)-len(Handler_Bing.SpaceLeft)-len(Handler_Bing.Source_Locations.index), len(Handler_Bing.Source_Locations.index) ))
+        File.write("%d. Place the Diluted %s into well %s in the first rack\n" % ( i+3, Factor, Handler_Bing.Space[i]))
+    File.write("%d. Place %d sterile Epitubes into the first rack starting from slot %d and move into the second rack if needed\n" %(i+4, len(Handler_Bing.Space)-len(Handler_Bing.SpaceLeft)-len(Handler_Bing.Source_Locations.index), len(Handler_Bing.Source_Locations.index+1) ))
     File.write("\n")
 
     File.write("FACTOR DILUTION PROTOCOL (Only do this if you have Dilution_Prep CSVs)\n\n")

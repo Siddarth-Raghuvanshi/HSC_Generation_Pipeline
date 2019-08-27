@@ -4,7 +4,6 @@
 import csv
 import numpy as np
 import string
-from math import ceil, floor
 from tkinter import messagebox
 import pandas as pd
 from pathlib import Path
@@ -19,9 +18,6 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
     Cell_Vol = Handler_Bing.Cell_Volume/len(X_Vars.columns)
     Factors = X_Vars.columns
     Levels = set()
-
-    #Set the space used for the factors
-    Handler_Bing.Factor_Space_Used(len(X_Vars.columns))
 
     #Used to take into account fractional factorial, i.e. uses all of the levels created by all the factors
     [Levels.update(X_Vars[Factor].unique().tolist()) for Factor in Factors]
@@ -87,7 +83,7 @@ def Get_Concentrations(Factor_Volume_Frame,Screwup = False, name = ""):
             for Factor in Factors:
                 writer.writerow([Factor])
         csvFile.close()
-        #messagebox.showinfo("Dilutions", "A File called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
+        messagebox.showinfo("Dilutions", "A File called " + name + " has been created for you to populate with the concentrations of your Factors and Levels, please fill it now")
 
     input("\nPress Enter to continue once completed...")
 
@@ -122,6 +118,9 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 
     #Volumes of Manual Concentration which should be made
     Manual_Volumes = Volume_Times_Conc.sum(axis = 1)/(Dilution_Conc.iloc[:,len(Levels)]*1.1)
+    if (Manual_Concentrations > Handler_Bing.Epitube_Vol).any():
+        Below_Cutoff_Values = Manual_Volumes[Manual_Volumes > Handler_Bing.Epitube_Vol]
+        Manual_Volumes = Manual_Volumes.where(Below_Cutoff_Values.isna(), Handler_Bing.Epitube_Vol)
     Manual_Concentrations = Volume_Times_Conc.sum(axis = 1)*len(Factors)/Manual_Volumes
 
     #Find the amounts the user needs to add to dilute the factors
@@ -142,6 +141,9 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 
 #Volume calculator for the EpMotion to create the factor dilutions and also Experiment_Matrix to create cereal dilutions tubes in case they are needed
 def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
+
+    #Set the space used for the factors
+    Handler_Bing.Factor_Space_Used(Factors))
 
     Factors = Factor_Volume_Frame.index
     Levels = Factor_Volume_Frame.columns
