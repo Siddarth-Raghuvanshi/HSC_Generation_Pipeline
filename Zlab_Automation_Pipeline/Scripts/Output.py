@@ -145,7 +145,7 @@ def Protcol_Output(Folder_Name, Needed_Vol, Handler_Bing):
     File.write("2. Place a 25 ml reservoir containing edge liquid into the 2nd slot in the reservoir\n")
     for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
         File.write("%d. Place the Diluted %s into well %s in the first rack\n" % ( i+3, Factor, Handler_Bing.Space[i]))
-    File.write("%d. Place %d sterile Epitubes into the first rack starting from slot %d and move into the second rack if needed\n" %(i+4, len(Handler_Bing.Space)-len(Handler_Bing.SpaceLeft)-len(Handler_Bing.Source_Locations.index), len(Handler_Bing.Source_Locations.index+1) ))
+    File.write("%d. Place %d sterile Epitubes into the first rack starting from slot %d and move into the second rack if needed\n" %(i+4, len(Handler_Bing.Space)-len(Handler_Bing.SpaceLeft)-len(Handler_Bing.Source_Locations.index), len(Handler_Bing.Source_Locations.index) + 1 ))
     File.write("\n")
 
     File.write("FACTOR DILUTION PROTOCOL (Only do this if you have Dilution_Prep CSVs)\n\n")

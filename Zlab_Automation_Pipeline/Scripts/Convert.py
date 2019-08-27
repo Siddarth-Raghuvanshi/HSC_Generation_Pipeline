@@ -118,9 +118,10 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 
     #Volumes of Manual Concentration which should be made
     Manual_Volumes = Volume_Times_Conc.sum(axis = 1)/(Dilution_Conc.iloc[:,len(Levels)]*1.1)
-    if (Manual_Concentrations > Handler_Bing.Epitube_Vol).any():
+    print(Manual)
+    if (Manual_Volumes > Handler_Bing.Epitube_Vol).any():
         Below_Cutoff_Values = Manual_Volumes[Manual_Volumes > Handler_Bing.Epitube_Vol]
-        Manual_Volumes = Manual_Volumes.where(Below_Cutoff_Values.isna(), Handler_Bing.Epitube_Vol)
+        Manual_Volumes = Manual_Volumes.where(Below_Cutoff_Values.isna(), Handler_Bing.Epitube_Vol/(1.1**2))
     Manual_Concentrations = Volume_Times_Conc.sum(axis = 1)*len(Factors)/Manual_Volumes
 
     #Find the amounts the user needs to add to dilute the factors
@@ -143,7 +144,7 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
 
     #Set the space used for the factors
-    Handler_Bing.Factor_Space_Used(Factors))
+    Handler_Bing.Factor_Space_Used(len(Factors))
 
     Factors = Factor_Volume_Frame.index
     Levels = Factor_Volume_Frame.columns
@@ -179,7 +180,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
     Number_of_Dilutions = pd.Series(np.ceil(
                                     np.log(Min_Dilution_Series.div(Vol_To_Add.min(axis=1)))/
                                     np.log(Handler_Bing.Epitube_Vol/Handler_Bing.Min_Dilution_Vol)))
-    if len(Handler_Bing.SpaceLeft) < Number_of_Dilutions.sum() + len(Factors)*len(Levels) + len(Factors):
+    if len(Handler_Bing.SpaceLeft) < Number_of_Dilutions.sum() + len(Factors)*len(Levels):
         messagebox.showinfo("Error", "There are too many tubes and too little space in the EpMotion required for cereally diluting the samples")
         quit()
 
