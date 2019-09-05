@@ -49,10 +49,6 @@ if __name__ == '__main__':
     #Used in case Tkinter crashs
     #Input, Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol  = ("/Users/Siddarth/Documents/Code/HSC_Generation_Pipeline/Test_Files/DIlution_Test.xlsx","96 Well",100,2,16,10)
 
-    #Create a new EpMotion to store information from the user and preset values
-    Handler_Bing = EpMotion()
-    Handler_Bing.Set_UserSpecs(Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol, Rack_Layout)
-
     #Check if the experiment is blocked, and if so divide them into blocks
     num_Blocks = 0
     Experiment = pd.read_excel(Input)
@@ -67,6 +63,11 @@ if __name__ == '__main__':
     Folders = Produce_Output_Folder(num_Blocks + 1)
 
     for i, Folder in enumerate(Folders[1:]):
+
+        #Create a new EpMotion to store information from the user and preset values
+        Handler_Bing = EpMotion()
+        Handler_Bing.Set_UserSpecs(Plate, Well_Volume, Edge_Num, Dead_Vol, Added_Cell_Vol, Rack_Layout)
+
         DOE_Table = Temp_Files[i].set_index('Pattern')
         Output_Plates, Needed_Vol, Factor_Commands, Cereal_Commands = Rearrangment(DOE_Table, Handler_Bing)
 
@@ -76,6 +77,6 @@ if __name__ == '__main__':
         Epmotion_Output(Factor_Commands, "FACTOR", Folder)
         Epmotion_Output(Output_Plates,"PLATE", Folder)
         Protcol_Output(Folder, Needed_Vol, Handler_Bing)
+        os.rename(Path.cwd() / "Dilution_Concentrations_SR.csv", Folder / "Dilution_Concentrations_SR.csv")
 
     Experiment_Summary(Folders[0], Experiment)
-    os.rename(Path.cwd() / "Dilution_Concentrations_SR.csv", Folders[0] / "Dilution_Concentrations_SR.csv")

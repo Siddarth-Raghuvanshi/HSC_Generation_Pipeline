@@ -117,7 +117,7 @@ def Protcol_Output(Folder_Name, Needed_Vol, Handler_Bing):
     File.write("Epmotion Protocol " + str(datetime.now().date()) + "\n\n")
 
     File.write("MEDIA AND FACTOR PREPARTION \n\n")
-    File.write("1. Create " + str(np.ceil(Handler_Bing.Media_Needed*1.1/1000)) + "mls of media\n" )
+    File.write("1. Create " + str(np.ceil(Handler_Bing.Media_Needed*1.21/1000)) + "mls of media\n" )
     for i,Factor in enumerate(Handler_Bing.Source_Locations.index):
         Initial_Vol = Needed_Vol[i][0]
         Media_Volume = Needed_Vol[i][1]

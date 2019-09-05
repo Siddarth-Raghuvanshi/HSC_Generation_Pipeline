@@ -28,7 +28,7 @@ def Rearrangment(Experiment_Matrix, Handler_Bing):
     Factor_Volume_Frame = Summary*Factor_Vol
     Cell_Volume_Frame = Summary*Cell_Vol
 
-    #Checks to ensure the Epmotion has space
+    #Checks to ensure that each volume needed isn't bigger than the Epitube
     if (((Factor_Volume_Frame) > Handler_Bing.Epitube_Vol).any(axis=None)):
         messagebox.showinfo("Error", "The Volume of a single tube at a specific level is too high for the Epitube, please block your experiment. (Modifications can be made to the program to adjust this by splitting the Levels into two tubes if needed)")
         quit()
@@ -118,7 +118,6 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 
     #Volumes of Manual Concentration which should be made
     Manual_Volumes = Volume_Times_Conc.sum(axis = 1)/(Dilution_Conc.iloc[:,len(Levels)]*1.1)
-    print(Manual)
     if (Manual_Volumes > Handler_Bing.Epitube_Vol).any():
         Below_Cutoff_Values = Manual_Volumes[Manual_Volumes > Handler_Bing.Epitube_Vol]
         Manual_Volumes = Manual_Volumes.where(Below_Cutoff_Values.isna(), Handler_Bing.Epitube_Vol/(1.1**2))
@@ -169,7 +168,7 @@ def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
     Vol_To_Add = Vol_To_Add.where(Scaled_Total_Vol.isna(), 0.5)
     Total_Volume = Total_Volume.where(Scaled_Total_Vol.isna(),Scaled_Total_Vol.values)
 
-    #Scale the rest of the concentrations to have a volume of the Epitube
+    #Scale the rest of the concentrations below the cutoff to have a total volume of a Epitube
     Below_Cutoff_Values = Vol_To_Add[Vol_To_Add < Handler_Bing.Min_Dilution_Vol]
     Scaled_Vol_Add = Below_Cutoff_Values.div(Total_Volume)*Handler_Bing.Epitube_Vol
     Vol_To_Add = Vol_To_Add.where(Scaled_Vol_Add.isna(), Scaled_Vol_Add)

@@ -18,20 +18,9 @@ Where ``` /path ``` is the current directory of the HSC_Generation_Pipeline fold
 
 ## For all users:
 
-Make sure that the following libraries are installed:
+There is a requirements file which contains the packages and the versions which need to be used.
 
-* xlrd
-* numpy
-* math
-* tkinter
-
-This can be easily achieved by installing Anaconda (Python 3) on the computer
-
-Then install xlutils using the following command:
-
-```
-pip install xlutils
-```
+This can be easily achieved by installing Anaconda (Python 3) on the computer and creating a virtual environment using the requirements.txt
 
 
 # Usage
