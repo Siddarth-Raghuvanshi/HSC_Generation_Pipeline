@@ -142,12 +142,12 @@ def Man_Dilution_Calc(Factor_Volume_Frame, Handler_Bing, FileName):
 #Volume calculator for the EpMotion to create the factor dilutions and also Experiment_Matrix to create cereal dilutions tubes in case they are needed
 def Dilution_Prep(Dilution_Conc, Factor_Volume_Frame, Handler_Bing):
 
-    #Set the space used for the factors
-    Handler_Bing.Factor_Space_Used(len(Factors))
-
     Factors = Factor_Volume_Frame.index
     Levels = Factor_Volume_Frame.columns
     Cereal_Commands = []
+    
+    #Set the space used for the factors
+    Handler_Bing.Factor_Space_Used(len(Factors))
 
     Total_Volume = (Factor_Volume_Frame+Handler_Bing.Dead_Vol)*1.1
 
